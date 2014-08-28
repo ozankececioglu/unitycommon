@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System;
 using Extensions;
 
+#if UNITY_EDITOR
 public class EditorCommon
 {
 	[MenuItem("SimBT/Build Bundles From Selection", priority = 500)]
@@ -212,3 +213,4 @@ public class EditorCommon
 //	}
 	
 }
+#endif

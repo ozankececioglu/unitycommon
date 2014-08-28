@@ -11,10 +11,11 @@ public static class BundleUtility
 		if (bundles.ContainsKey (name))
 			bundle = bundles [name];
 		else {
-			string path = Application.streamingAssetsPath + name + ".unity3d";
+			string path = Application.streamingAssetsPath + "/" + name + ".unity3d";
 			bundle = AssetBundle.CreateFromFile (path);
-			if (!bundle)
+			if (bundle == null) {
 				throw new UnityException ("Bundle not found at path " + path);
+			}
 			
 			if (cache) {
 				bundles.Add (name, bundle);
