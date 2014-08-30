@@ -11,12 +11,13 @@ public static class GUICommon
 		public Action action;
 	}
 	
+	public static float fieldNameWidth = 150f;
+	public static float fieldDepthWidth = 20f;
+	
 	static GUIContent textImageContent = new GUIContent ();
 	static GUIContent imageContent = new GUIContent ();
 	static GUIContent textContent = new GUIContent ();
 	static Stack<ActionContainer> postGuiActions = new Stack<ActionContainer>();
-	public static float fieldNameWidth = 150f;
-	public static float fieldDepthWidth = 20f;
 	//
 	private static GUIStyle _fieldNameStyle = null;
 	public static GUIStyle fieldNameStyle {

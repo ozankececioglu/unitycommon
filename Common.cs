@@ -300,8 +300,7 @@ public static class Common
 	
 	public static Type [] GetExtendedTypes (Type fromType)
 	{
-		Assembly assembly = Assembly.GetExecutingAssembly ();
-		var types = assembly.GetTypes ();
+		var types = Assembly.GetExecutingAssembly ().GetTypes ();
 		List<Type> result = new List<Type> ();
 		foreach (var type in types) {
 			if (fromType.IsAssignableFrom (type) && !type.IsAbstract) {
