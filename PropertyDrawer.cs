@@ -215,7 +215,7 @@ public class PropertyDrawer
 
 	public static bool Draw<T> (ref T value, NullPolicy nullPolicy = NullPolicy.InstantiateNullFields)
 	{
-		return Draw (ref value, nullPolicy);
+		return Draw("", ref value, nullPolicy);
 	}
 
 	public static bool Draw<T> (string name, ref T value, NullPolicy nullPolicy = NullPolicy.InstantiateNullFields)
