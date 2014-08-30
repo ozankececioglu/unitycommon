@@ -1,0 +1,15 @@
+/IsbirKatalog/Library
+/IsbirKatalog/Temp
+/IsbirKatalog/obj
+/IsbirKatalog/IsbirKatalog_ScreenShots
+*.csproj
+*.pidb
+*.csproj
+*.unityproj
+*.sln
+*.userprefs
+*.DS_Store
+/FileDialog/Console/obj
+/FileDialog/Console/bin
+/FileDialog/Main/obj
+/FileDialog/Main/bin
