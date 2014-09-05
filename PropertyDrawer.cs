@@ -21,6 +21,7 @@ public abstract class DynamicEnum
 		return d.value;
 	}
 
+	
 	public string[] GetNames ()
 	{
 		string[] result;
@@ -87,20 +88,7 @@ public class PropertyDrawer
 	
 	public class Label : Attribute
 	{
-//		public struct FloatRange
-//		{
-//			public float min;
-//			public float max;
-//
-//			public FloatRange (float tmin, float tmax)
-//			{
-//				min = tmin;
-//				max = tmax;
-//			}
-//		}
-
 		public string label;
-//		public FloatRange range;
 		
 		public Label()
 		{
@@ -110,14 +98,7 @@ public class PropertyDrawer
 		public Label (string tlabel)
 		{
 			label = tlabel;
-//			range = new FloatRange(float.MinValue, float.MaxValue);
 		}
-		
-//		public Label (string tlabel, FloatRange trange)
-//		{
-//			label = tlabel;
-//			range = trange;
-//		}
 	}
 
 	public class CustomPropertyDrawer : Attribute
@@ -180,14 +161,12 @@ public class PropertyDrawer
 				result = enumDrawer;
 			} else if (dynamicEnumDrawer.SupportsType (type)) {
 				result = dynamicEnumDrawer;
-				//		} else if (unityObjectDrawer.SupportsType(type)) {
-				//			return unityObjectDrawer;
+//			} else if (unityObjectDrawer.SupportsType(type)) {
+//				return unityObjectDrawer;
 			} else if (arrayDrawer.SupportsType (type)) {
 				result = arrayDrawer;
 			} else if (listDrawer.SupportsType (type)) {
 				result = listDrawer;
-			} else if (drawers.ContainsKey (type)) {
-				result = drawers [type];
 			} else {
 				result = objectDrawer;
 			}
@@ -294,30 +273,30 @@ internal class EnumDrawer : PropertyDrawer
 	}
 }
 
-internal class UnityObjectDrawer : PropertyDrawer
-{
-	static Type objectType = typeof(UnityEngine.Object);
-
-	//	public override bool OnValue (ref AIPropertyArgs args)
-	//	{		
-	//		var clipboard = AIAuthor.Instance.clipboard;
-	//		if (clipboard != null && clipboard.GetType ().IsAssignableFrom (value.GetType()) && GUILayout.Button ("Paste")) {
-	//			value = AIAuthor.Instance.clipboard;
-	//			return true;
-	//		}
-	//		
-	//		if (value == null && GUILayout.Button ("Remove")) {
-	//			value = null;
-	//		}
-	//		
-	//		return false;
-	//	}
-
-	public override bool SupportsType (Type type)
-	{
-		return objectType.IsAssignableFrom (type);
-	}
-}
+//internal class UnityObjectDrawer : PropertyDrawer
+//{
+//	static Type objectType = typeof(UnityEngine.Object);
+//
+//	public override bool OnValue (ref AIPropertyArgs args)
+//	{		
+//		var clipboard = AIAuthor.Instance.clipboard;
+//		if (clipboard != null && clipboard.GetType ().IsAssignableFrom (value.GetType()) && GUILayout.Button ("Paste")) {
+//			value = AIAuthor.Instance.clipboard;
+//			return true;
+//		}
+//		
+//		if (value == null && GUILayout.Button ("Remove")) {
+//			value = null;
+//		}
+//		
+//		return false;
+//	}
+//
+//	public override bool SupportsType (Type type)
+//	{
+//		return objectType.IsAssignableFrom (type);
+//	}
+//}
 
 internal class ListDrawer : PropertyDrawer
 {
@@ -538,14 +517,14 @@ internal class ObjectDrawer : PropertyDrawer
 		}
 	}
 
-	static Dictionary<Type, LabelDescription[]> descriptions = new Dictionary<Type, LabelDescription[]> ();
+	static Dictionary<Type, List<LabelDescription> > descriptions = new Dictionary<Type, List<LabelDescription> > ();
 
-	public static LabelDescription [] GetDescriptions (Type type)
+	public static List<LabelDescription> GetDescriptions (Type type)
 	{
-		LabelDescription [] result = null;
+		List<LabelDescription> result = null;
 		if (!descriptions.TryGetValue (type, out result)) {
 			Type customLabelType = typeof(Label);
-			List<LabelDescription> labelList = new List<LabelDescription> ();
+			List<LabelDescription> result = new List<LabelDescription> ();
 			var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
 			foreach (var member in type.GetMembers(bindingFlags)) {
@@ -555,7 +534,7 @@ internal class ObjectDrawer : PropertyDrawer
 					if (customLabel != null) {
 						var drawer = PropertyDrawer.GetDrawer (property.PropertyType);
 						if (drawer != null) {
-							labelList.Add (new PropertyDescription (customLabel, property));
+							result.Add (new PropertyDescription (customLabel, property));
 						} else {
 							Debug.LogWarning (type + "." + property.Name + " has Label attribute but there is no drawers for " + property.PropertyType);
 						}
@@ -566,15 +545,15 @@ internal class ObjectDrawer : PropertyDrawer
 					if (customLabel != null) {
 						var drawer = PropertyDrawer.GetDrawer (field.FieldType);
 						if (drawer != null) {
-							labelList.Add (new FieldDescription (customLabel, field));
+							result.Add (new FieldDescription (customLabel, field));
 						} else {
 							Debug.LogWarning (type + "." + field.Name + " has Label attribute but there is no drawers for " + field.FieldType);
 						}
 					}
 				}
 			}
-
-			result = labelList.ToArray ();
+			
+			result.TrimExcess();
 			descriptions.Add (type, result);
 		}
 
