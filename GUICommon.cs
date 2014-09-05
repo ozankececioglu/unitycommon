@@ -39,14 +39,12 @@ public static class GUICommon
 	public static void PushPostGui() {
 		postGuiActions.Push(new ActionContainer());
 	}
-	
 	public static void PopPostGui() {
 		var actionContainer = postGuiActions.Pop();
 		if (actionContainer.action != null) {
 			actionContainer.action();
 		}
 	}
-	
 	public static void AddPostGui(Action action) {
 		var actionContainer = postGuiActions.Peek();
 		actionContainer.action += action;
@@ -57,20 +55,17 @@ public static class GUICommon
 		textContent.text = text;
 		return textContent;
 	}
-
 	public static GUIContent TempContent (Texture image)
 	{
 		imageContent.image = image;
 		return imageContent;
 	}
-	
 	public static GUIContent TempContent (string text, Texture image)
 	{
 		textImageContent.text = text;
 		textImageContent.image = image;
 		return textImageContent;
 	}
-	
 	public static GUIContent [] TempContent (string [] texts)
 	{
 		var result = new GUIContent[texts.Length];
@@ -90,13 +85,11 @@ public static class GUICommon
 	static int comboControl = 0;
 	static int comboResult = -1;
 	static Rect comboRect;
-	static int comboYFieldCount;
 	
 	public static bool ComboField (ref int selection, string [] fields, params GUILayoutOption [] options)
 	{
 		return ComboField (ref selection, fields, GUI.skin.box, options);
 	}
-	
 	public static bool ComboField (ref int selection, string [] fields, GUIStyle style, params GUILayoutOption [] options)
 	{
 		int id = GUIUtility.GetControlID (popupListHash, FocusType.Passive);
@@ -149,7 +142,6 @@ public static class GUICommon
 		
 		return false;
 	}
-	
 	public static bool ColorField (ref Color color) 
 	{
 		return false;
@@ -215,7 +207,6 @@ public static class GUICommon
 		
 		return 0f;
 	}
-	
 	public static float NumberLabel(string name, params GUILayoutOption [] options)
 	{
 		int controlId = GUIUtility.GetControlID(FocusType.Native);
@@ -235,7 +226,6 @@ public static class GUICommon
 		
 		return 0f;
 	}
-	
 	public static float NumberLabel(string name, int depth)
 	{
 		float pixelDepth = depth * GUICommon.fieldDepthWidth;
@@ -253,7 +243,6 @@ public static class GUICommon
 		
 		return tguiChanged;
 	}
-	
 	public static bool IntField (ref int value, params GUILayoutOption [] options)
 	{
 		var style = GUI.skin.textField;
@@ -267,7 +256,6 @@ public static class GUICommon
 		value = (int)oval;
 		return tresult;
 	}
-	
 	public static bool FloatField (ref float value, params GUILayoutOption [] options)
 	{
 		var style = GUI.skin.textField;
@@ -281,7 +269,6 @@ public static class GUICommon
 		value = (float)oval;
 		return tresult;
 	}
-	
 	public static bool DoubleField (ref double value, params GUILayoutOption [] options)
 	{
 		var style = GUI.skin.textField;
@@ -295,7 +282,6 @@ public static class GUICommon
 		value = (double)oval;
 		return tresult;
 	}
-	
 	public static bool Vector3Field (ref Vector3 value)
 	{
 		Rect rect = GUILayoutUtility.GetRect (TempContent ("Vector3Field"), GUI.skin.textField, GUILayout.ExpandWidth(true));
@@ -346,7 +332,6 @@ public static class GUICommon
 		
 		return changed;
 	}
-	
 	public static bool BoundsField (ref Bounds value)
 	{
 		var changed = false;
@@ -372,7 +357,6 @@ public static class GUICommon
 		
 		return changed;
 	}
-
 	public static bool StringFieldWithLabel(string label, ref string text)
 	{
 		GUILayout.BeginHorizontal();
@@ -386,7 +370,6 @@ public static class GUICommon
 		
 		return tguiChanged;
 	}
-	
 	public static bool BoolFieldWithLabel(string label, ref bool value) 
 	{
 		GUILayout.BeginHorizontal();
@@ -398,7 +381,6 @@ public static class GUICommon
 		
 		return result;
 	}
-	
 	public static bool IntFieldWithLabel(string label, ref int value) 
 	{
 		GUILayout.BeginHorizontal();
@@ -412,7 +394,6 @@ public static class GUICommon
 		
 		return result;
 	}
-	
 	public static bool FloatFieldWithLabel(string label, ref float value) 
 	{
 		GUILayout.BeginHorizontal();
@@ -426,7 +407,6 @@ public static class GUICommon
 		
 		return result;
 	}
-	
 	public static bool DoubleFieldWithLabel(string label, ref double value)
 	{
 		GUILayout.BeginHorizontal();
@@ -440,7 +420,6 @@ public static class GUICommon
 		
 		return result;
 	}
-	
 	public static bool ComboFieldWithLabel(string label, ref int selection, string [] fields)
 	{
 		GUILayout.BeginHorizontal();
@@ -450,7 +429,6 @@ public static class GUICommon
 
 		return result;
 	}
-
 	public static bool ImageFieldWithLabel(string label, Texture image)
 	{
 		GUILayout.BeginHorizontal();
@@ -459,7 +437,6 @@ public static class GUICommon
 		GUILayout.EndHorizontal();
 		return result;
 	}
-
 	public static bool FloatSliderWithLabel(string label, ref float value, float min, float max)
 	{
 		GUILayout.BeginHorizontal();
@@ -467,6 +444,18 @@ public static class GUICommon
 		var nvalue = GUILayout.HorizontalSlider(value, min, max);
 		GUILayout.EndHorizontal();
 		if (!(nvalue - value).IsZero()) {
+			value = nvalue;
+			return true;
+		}
+		return false;
+	}
+	public static bool IntSliderWithLabel(string label, ref int value, int min, int max)
+	{
+		GUILayout.BeginHorizontal();
+		GUILayout.Label(label, GUILayout.Width(fieldNameWidth));
+		int nvalue = Mathf.RoundToInt(GUILayout.HorizontalSlider(value, min, max));
+		GUILayout.EndHorizontal();
+		if (nvalue != value) {
 			value = nvalue;
 			return true;
 		}

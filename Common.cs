@@ -98,7 +98,7 @@ public static class Common
 		if (Application.isEditor) {
 			UnityEngine.Debug.Log (log);
 		} else {
-			File.AppendAllText("log.txt", log)
+			File.AppendAllText("log.txt", log);
 		}
 	}
 	
