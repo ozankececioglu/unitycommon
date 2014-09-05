@@ -91,6 +91,16 @@ public static class Common
 		return obj is GameObject ? !IsPrefab(obj) : false;
 	}
 #endif
+
+	public static void Log (object obj)
+	{
+		string log = PrintObject (obj, 0);
+		if (Application.isEditor) {
+			UnityEngine.Debug.Log (log);
+		} else {
+			File.AppendAllText("log.txt", log)
+		}
+	}
 	
 	static Texture2D dummyTexture = null;
 	public static Texture2D DummyTexture ()
@@ -223,22 +233,6 @@ public static class Common
 		UnityEngine.Debug.DrawLine(position + new Vector3(xmax, ymin, zmax), position + new Vector3(xmax, ymax, zmax), color);
 		UnityEngine.Debug.DrawLine(position + new Vector3(xmax, ymin, zmax), position + new Vector3(xmin, ymin, zmax), color);
 	}
-//	private const int segmentCount = 8;
-//	public static void DrawSphere(Vector3 center, float radius) 
-//	{
-//		DrawSphere(center, radius, Color.white);
-//	}
-//	public static void DrawSphere(Vector3 center, float radius, Color color)
-//	{
-//		Vector3 previous = center + Vector3.one * radius;
-//		for (int xsegment = 0; xsegment < segmentCount; xsegment++) {
-//			var sin = Mathf.Sin(xsegment / segmentCount * 360f);
-//			
-//			for (int ysegment = 0; ysegment < segmentCount; ysegment++) {
-//
-//			}
-//		}
-//	}
 
 	public static Vector2 MouseDeltaNormalized()
 	{
@@ -247,8 +241,6 @@ public static class Common
 	public static Vector2 MouseDeltaInPixels()
 	{
 		var result = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));
-//		var mainCamera = Camera.main;
-//		result.Scale(new Vector2(mainCamera.pixelWidth, mainCamera.pixelHeight));
 		return result;
 	}
 
@@ -326,16 +318,6 @@ public static class Common
 		}
 		return result;
 	}
-	
-	public static void PrintObject (object obj)
-	{
-		UnityEngine.Debug.Log (PrintObject (obj, 0));
-	}
-
-    public static void DebugObject(object obj)
-    {
-        Debugger.Log(PrintObject(obj, 0));
-    }
 
 	private static string PrintObject (object obj, int depth)
 	{
