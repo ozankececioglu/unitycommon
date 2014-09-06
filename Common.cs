@@ -96,37 +96,39 @@ public static class Common
 
 	static Common()
 	{
+#if !UNITY_EDITOR
 		File.AppendAllText("log.txt", "\n=============================" + DateTime.Now.ToString() + "=============================\n");
+#endif
 	}
 
-	public static void Log(object obj)
+	public static void Log(object obj, bool forceToFile = false)
 	{
 		string log = PrintObject(obj, 0);
-#if UNITY_EDITOR
+
 		UnityEngine.Debug.Log(log);
-#else
-		File.AppendAllText("log.txt", "info: " + log + "\n");
-#endif
+		if (Application.isEditor || forceToFile) {
+			File.AppendAllText("log.txt", "info: " + log.Replace("\n", "\n\t") + "\n");
+		}
 	}
 
-	public static void LogWarning(object obj)
+	public static void LogWarning(object obj, bool forceToFile = false)
 	{
 		string log = PrintObject(obj, 0);
-#if UNITY_EDITOR
+
 		UnityEngine.Debug.LogWarning(log);
-#else
-		File.AppendAllText("log.txt", "*warning*: " + log + "\n");
-#endif
+		if (Application.isEditor || forceToFile) {
+			File.AppendAllText("log.txt", "*warning*: " + log.Replace("\n", "\n\t") + "\n");
+		}
 	}
 
-	public static void LogError(object obj)
+	public static void LogError(object obj, bool forceToFile = false)
 	{
 		string log = PrintObject(obj, 0);
-#if UNITY_EDITOR
+
 		UnityEngine.Debug.LogError(log);
-#else
-		File.AppendAllText("log.txt", "**error**: " + log + "\n");
-#endif
+		if (Application.isEditor || forceToFile) {
+			File.AppendAllText("log.txt", "**error**: " + log.Replace("\n", "\n\t") + "\n");
+		}
 	}
 
 	static Texture2D dummyTexture = null;
@@ -397,15 +399,15 @@ public static class Common
 
 	public static GameObject Instantiate(GameObject go, Transform parent = null)
 	{
-		return Common.Instantiate(go, parent, Vector3.zero, Quaternion.identity, go.transform.localScale);
+		return Instantiate(go, parent, Vector3.zero, Quaternion.identity, go.transform.localScale);
 	}
 	public static GameObject Instantiate(GameObject go, Transform parent, Vector3 localPosition)
 	{
-		return Common.Instantiate(go, parent, localPosition, Quaternion.identity, go.transform.localScale);
+		return Instantiate(go, parent, localPosition, Quaternion.identity, go.transform.localScale);
 	}
 	public static GameObject Instantiate(GameObject go, Transform parent, Vector3 localPosition, Quaternion localRotation)
 	{
-		return Common.Instantiate(go, parent, localPosition, localRotation, go.transform.localScale);
+		return Instantiate(go, parent, localPosition, localRotation, go.transform.localScale);
 	}
 	public static GameObject Instantiate(GameObject go, Transform parent, Vector3 localPosition, Quaternion localRotation, Vector3 localScale)
 	{
