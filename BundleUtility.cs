@@ -14,7 +14,8 @@ public static class BundleUtility
 			string path = Application.streamingAssetsPath + "/" + name + ".unity3d";
 			bundle = AssetBundle.CreateFromFile (path);
 			if (bundle == null) {
-				throw new UnityException ("Bundle not found at path " + path);
+				Common.Log("Bundle not found at path " + path);
+				return null;
 			}
 			
 			if (cache) {
@@ -28,6 +29,9 @@ public static class BundleUtility
 	public static GameObject InstantiateBundle (string name, string assetName = null)
 	{
 		AssetBundle bundle = GetBundle (name);
+		if (bundle == null) {
+			return null;
+		}
 		UnityEngine.Object source = assetName == null || assetName == "" || assetName == bundle.mainAsset.name ? bundle.mainAsset : bundle.Load (assetName);
 		GameObject result = UnityEngine.Object.Instantiate(source) as GameObject;
 		result.name = source.name;
@@ -37,6 +41,9 @@ public static class BundleUtility
 	public static GameObject InstantiateBundleForOnce(string name, string assetName = null) 
 	{
 		AssetBundle bundle = GetBundle (name, false);
+		if (bundle == null) {
+			return null;
+		}
 		UnityEngine.Object source = assetName == null || assetName == "" || assetName == bundle.mainAsset.name ? bundle.mainAsset : bundle.Load (assetName);
 		GameObject result = UnityEngine.Object.Instantiate(source) as GameObject;
 		result.name = source.name;
