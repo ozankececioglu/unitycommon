@@ -529,7 +529,7 @@ internal class ObjectDrawer : PropertyDrawer
 						if (drawer != null) {
 							result.Add(new PropertyDescription(customLabel, property));
 						} else {
-							Debug.LogWarning(type + "." + property.Name + " has Label attribute but there is no drawers for " + property.PropertyType);
+							Common.LogWarning(type + "." + property.Name + " has Label attribute but there is no drawers for " + property.PropertyType);
 						}
 					}
 				} else if (member.MemberType == MemberTypes.Field) {
@@ -540,7 +540,7 @@ internal class ObjectDrawer : PropertyDrawer
 						if (drawer != null) {
 							result.Add(new FieldDescription(customLabel, field));
 						} else {
-							Debug.LogWarning(type + "." + field.Name + " has Label attribute but there is no drawers for " + field.FieldType);
+							Common.LogWarning(type + "." + field.Name + " has Label attribute but there is no drawers for " + field.FieldType);
 						}
 					}
 				}
@@ -650,20 +650,40 @@ internal class DynamicEnumDrawer : PropertyDrawer
 [CustomPropertyDrawer(typeof(string))]
 internal class StringDrawer : PropertyDrawer
 {
-	public override bool OnValue(ref DrawerArgs args)
+	public override bool OnLabelAndValue(ref PropertyDrawer.DrawerArgs args)
 	{
-		string svalue = args.value.ToString();
-		bool changed = svalue == null;
-		if (changed) {
-			svalue = "";
-			args.value = svalue;
+		if (args.value == null) {
+			switch (args.nullPolicy) {
+				case NullPolicy.HideNullFields:
+					return false;
+				case NullPolicy.InstantiateNullFields:
+					args.value = "";
+					return true;
+				case NullPolicy.ShowNullFields:
+					var changed = false;
+					GUILayout.BeginHorizontal();
+					GUICommon.FieldLabel(args.name, args.depth);
+					if (GUILayout.Button(PropertyDrawer.createText)) {
+						args.value = "";
+						changed = true;
+					}
+					GUILayout.EndHorizontal();
+					return changed;
+				default:
+					return false;
+			}
+		} else {
+			var changed = false;
+			GUILayout.BeginHorizontal();
+			GUICommon.FieldLabel(args.name, args.depth);
+			string svalue = args.value.ToString();
+			if (GUICommon.StringField(ref svalue)) {
+				args.value = svalue;
+				changed = true;
+			}
+			GUILayout.EndHorizontal();
+			return changed;
 		}
-
-		if (GUICommon.StringField(ref svalue)) {
-			args.value = svalue;
-			return true;
-		}
-		return changed;
 	}
 }
 
@@ -681,7 +701,7 @@ internal class IntDrawer : PropertyDrawer
 				return true;
 			}
 			return false;
-			
+
 		} else {
 			GUILayout.BeginHorizontal();
 			float delta = GUICommon.NumberLabel(args.name, args.depth);
@@ -715,7 +735,7 @@ internal class FloatDrawer : PropertyDrawer
 				return true;
 			}
 			return false;
-			
+
 		} else {
 			GUILayout.BeginHorizontal();
 			float delta = GUICommon.NumberLabel(args.name, args.depth);

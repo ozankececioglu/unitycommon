@@ -51,7 +51,7 @@ public class NetworkTCPListener
         }
         catch ( Exception e )
         {
-            Debug.Log("Socket error:" + e);
+            Common.Log("Socket error:" + e);
 			
 			if (networkStatusChanged != null)
             	networkStatusChanged(NetworkState.STATE_ERROR);
@@ -79,7 +79,7 @@ public class NetworkTCPListener
             byte [] buffer = new byte [theSocket.ReceiveBufferSize];
             int sizeRead = theStream.Read(buffer, 0, buffer.Length);
             String message = Encoding.UTF8.GetString(buffer);
-            Debug.Log("Size read = " + sizeRead + " Message = " + message);
+            Common.Log("Size read = " + sizeRead + " Message = " + message);
 			
 			if (networkMessageReceived != null)
 				networkMessageReceived(message);
@@ -88,7 +88,7 @@ public class NetworkTCPListener
         }
         catch ( Exception e )
         {
-            Debug.Log(e.Message);
+            Common.Log(e.Message);
 			
 			if (networkStatusChanged != null)
             	networkStatusChanged(NetworkState.STATE_ERROR);

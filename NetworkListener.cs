@@ -13,7 +13,7 @@ public class NetworkListener : MonoBehaviour
     void Awake()
     {
         this.listener = new TcpListener(IPAddress.Any, port);
-        Debug.Log("network listener initialized at port "+port);
+        Common.Log("network listener initialized at port "+port);
     }
 
     void Update()
@@ -23,13 +23,13 @@ public class NetworkListener : MonoBehaviour
         int counter = 0;
         try
         {
-            Debug.Log("Waiting for a connection... ");
+            Common.Log("Waiting for a connection... ");
 
             // Perform a blocking call to accept requests.
             // You could also user server.AcceptSocket() here.
             TcpClient client = this.listener.AcceptTcpClient();
             counter++;
-            Debug.Log("#" + counter + " Connected!");
+            Common.Log("#" + counter + " Connected!");
 
             data = null;
 
@@ -43,7 +43,7 @@ public class NetworkListener : MonoBehaviour
             {
                 // Translate data bytes to a ASCII string.
                 data = System.Text.Encoding.ASCII.GetString(bytes, 0, i);
-                Debug.Log("Received: "+ data + counter);
+                Common.Log("Received: "+ data + counter);
 
                 // Process the data sent by the client.
                 data = data.ToUpper();
@@ -52,7 +52,7 @@ public class NetworkListener : MonoBehaviour
 
                 // Send back a response.
                 stream.Write(msg, 0, msg.Length);
-                Debug.Log("Sent: "+ data + "Client counter:" + counter);
+                Common.Log("Sent: "+ data + "Client counter:" + counter);
             }
 
             // Shutdown and end connection
@@ -60,7 +60,7 @@ public class NetworkListener : MonoBehaviour
         }
         catch ( SocketException e )
         {
-            Debug.Log("SocketException: "+ e.Message);
+            Common.Log("SocketException: "+ e.Message);
         }
         finally
         {

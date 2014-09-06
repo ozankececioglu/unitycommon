@@ -45,14 +45,15 @@ public class UnitySingleton<T> : MonoBehaviour where T : MonoBehaviour
 	private static T instance = null;
 	public static T Instance
 	{
-		get {
+		get
+		{
 			if (instance == null) {
 				var className = typeof(T).Name;
 				var go = GameObject.Find("/" + className);
 				if (go == null) {
 					go = new GameObject(className);
 				}
-				
+
 				instance = go.GetComponent<T>();
 				if (instance == null) {
 					instance = go.AddComponent<T>();
@@ -67,7 +68,7 @@ public static class Common
 {
 #if UNITY_EDITOR
 	[MenuItem("SimBT/Apply All Prefabs", priority = 500)]
-	public static void ApplyChangesToPrefabs() 
+	public static void ApplyChangesToPrefabs()
 	{
 		var gos = Selection.gameObjects;
 		foreach (var go in gos) {
@@ -76,7 +77,8 @@ public static class Common
 		}
 		Selection.objects = gos;
 	}
-	public static void ApplyChangeToPrefab(GameObject go) {
+	public static void ApplyChangeToPrefab(GameObject go)
+	{
 		var selection = Selection.objects;
 		Selection.activeObject = go;
 		EditorApplication.ExecuteMenuItem("GameObject/Apply Changes To Prefab");
@@ -92,89 +94,114 @@ public static class Common
 	}
 #endif
 
-	public static void Log (object obj)
+	static Common()
 	{
-		string log = PrintObject (obj, 0);
-		if (Application.isEditor) {
-			UnityEngine.Debug.Log (log);
-		} else {
-			File.AppendAllText("log.txt", log);
-		}
+		File.AppendAllText("log.txt", "\n=============================" + DateTime.Now.ToString() + "=============================\n");
 	}
-	
+
+	public static void Log(object obj)
+	{
+		string log = PrintObject(obj, 0);
+#if UNITY_EDITOR
+		UnityEngine.Debug.Log(log);
+#else
+		File.AppendAllText("log.txt", "info: " + log + "\n");
+#endif
+	}
+
+	public static void LogWarning(object obj)
+	{
+		string log = PrintObject(obj, 0);
+#if UNITY_EDITOR
+		UnityEngine.Debug.LogWarning(log);
+#else
+		File.AppendAllText("log.txt", "*warning*: " + log + "\n");
+#endif
+	}
+
+	public static void LogError(object obj)
+	{
+		string log = PrintObject(obj, 0);
+#if UNITY_EDITOR
+		UnityEngine.Debug.LogError(log);
+#else
+		File.AppendAllText("log.txt", "**error**: " + log + "\n");
+#endif
+	}
+
 	static Texture2D dummyTexture = null;
-	public static Texture2D DummyTexture ()
+	public static Texture2D DummyTexture()
 	{
 		if (dummyTexture == null) {
-			dummyTexture = new Texture2D (1, 1);
-			dummyTexture.SetPixel (0, 0, Color.white);
+			dummyTexture = new Texture2D(1, 1);
+			dummyTexture.SetPixel(0, 0, Color.white);
 		}
 		return dummyTexture;
 	}
-	
-	public static Transform [] Roots ()
+
+	public static Transform[] Roots()
 	{
-		return GameObject.FindSceneObjectsOfType (typeof(Transform)).Cast<Transform> ().Where (x => x.parent == null).ToArray ();
+		return GameObject.FindSceneObjectsOfType(typeof(Transform)).Cast<Transform>().Where(x => x.parent == null).ToArray();
 	}
-	
-	public static Rect DrawTextureAligned (Rect bounds, Texture2D texture)
+
+	public static Rect DrawTextureAligned(Rect bounds, Texture2D texture)
 	{
-		Rect target = new Rect ();
+		Rect target = new Rect();
 		float boundsAspectRatio = bounds.width / bounds.height;
 		float textureAspectRatio = ((float)texture.width) / texture.height;
 		if (boundsAspectRatio > textureAspectRatio) { // fit height
 			float heightRatio = texture.height / bounds.height;
 			float width = texture.width / heightRatio;
-			target.Set (bounds.x + (bounds.width - width) * 0.5f, bounds.y, width, bounds.height);
+			target.Set(bounds.x + (bounds.width - width) * 0.5f, bounds.y, width, bounds.height);
 		} else { // fit width
 			float widthRatio = texture.width / bounds.width;
 			float height = texture.height / widthRatio;
-			target.Set (bounds.x, bounds.y + (bounds.height - height) * 0.5f, bounds.width, height);
+			target.Set(bounds.x, bounds.y + (bounds.height - height) * 0.5f, bounds.width, height);
 		}
 
-		GUI.DrawTexture (target, texture);
+		GUI.DrawTexture(target, texture);
 		return target;
 	}
-	
-	public static string DayTimeToString (float timeValue)
+
+	public static string DayTimeToString(float timeValue)
 	{
 		int time = (int)(1439.0f * timeValue);
 		int hour = time / 60;
 		int min = time % 60;
 		return "" + (hour < 10 ? "0" + hour : "" + hour) + ":" + (min < 10 ? "0" + min : "" + min);
 	}
-	
-	public static Bounds GetLocalBounds (GameObject go)
+
+	public static Bounds GetLocalBounds(GameObject go)
 	{
-		Collider collider = go.GetComponent<Collider> ();
-		
+		Collider collider = go.GetComponent<Collider>();
+
 		if (collider == null) {
-			throw new System.Exception (go.name + ": GameObject has no collider attached");
+			throw new System.Exception(go.name + ": GameObject has no collider attached");
 		} else if (collider is BoxCollider) {
 			BoxCollider box = collider as BoxCollider;
-			return new Bounds (box.center, box.size);
+			return new Bounds(box.center, box.size);
 		} else if (collider is MeshCollider) {
 			MeshCollider mesh = collider as MeshCollider;
 			return mesh.sharedMesh.bounds;
 		} else if (collider is CharacterController) {
 			CharacterController character = collider as CharacterController;
-			return new Bounds (character.center, new Vector3 (character.radius, character.height, character.radius));
+			return new Bounds(character.center, new Vector3(character.radius, character.height, character.radius));
 		} else if (collider is CapsuleCollider) {
 			CapsuleCollider capsule = collider as CapsuleCollider;
-			return new Bounds (capsule.center, new Vector3 (capsule.radius, capsule.height, capsule.radius));
-		} else if (collider is SphereCollider) { 
+			return new Bounds(capsule.center, new Vector3(capsule.radius, capsule.height, capsule.radius));
+		} else if (collider is SphereCollider) {
 			SphereCollider sphere = collider as SphereCollider;
-			return new Bounds (sphere.center, new Vector3 (sphere.radius, sphere.radius, sphere.radius));
+			return new Bounds(sphere.center, new Vector3(sphere.radius, sphere.radius, sphere.radius));
 		} else {
-			throw new NotImplementedException ();
+			throw new NotImplementedException();
 		}
 	}
-		
-	public static void DrawLine (IEnumerable<Vector3> line)
+
+	public static void DrawLine(IEnumerable<Vector3> line)
 	{
-		DrawLine (line, Color.white);
+		DrawLine(line, Color.white);
 	}
-	public static void DrawLine (IEnumerable<Vector3> line, Color color)
+	public static void DrawLine(IEnumerable<Vector3> line, Color color)
 	{
 		CoupleEnumerator<Vector3> enumer = new CoupleEnumerator<Vector3>(line);
 		while (enumer.MoveNext()) {
@@ -244,13 +271,13 @@ public static class Common
 		return result;
 	}
 
-	public static float [] Discriminant (float a, float b, float c)
+	public static float[] Discriminant(float a, float b, float c)
 	{
 		float discriminant = b * b - 4f * a * c;
-		if (discriminant.IsZero ()) {
-			return new float[1] {- b / 2f * a};
+		if (discriminant.IsZero()) {
+			return new float[1] { -b / 2f * a };
 		} else if (discriminant > 0f) {
-			discriminant = Mathf.Sqrt (discriminant);
+			discriminant = Mathf.Sqrt(discriminant);
 			a = 2f * a;
 			return new float[2] {
 				(discriminant - b) / a,
@@ -260,129 +287,129 @@ public static class Common
 			return new float[0];
 		}
 	}
-	public static float TimeDiscriminant (float distance, float velocity, float accel)
+	public static float TimeDiscriminant(float distance, float velocity, float accel)
 	{
-		if (!accel.IsZero ()) {
-			float [] roots = Discriminant (0.5f * accel, velocity, -distance);
+		if (!accel.IsZero()) {
+			float[] roots = Discriminant(0.5f * accel, velocity, -distance);
 			float time = float.MaxValue;
 			foreach (float root in roots)
 				if (root > 0f && root < time)
 					time = root;
-			return time;	
-		} else if (!velocity.IsZero ()) {
+			return time;
+		} else if (!velocity.IsZero()) {
 			float time = distance / velocity;
 			return time > 0f ? time : float.MaxValue;
 		} else {
 			return float.MaxValue;
 		}
 	}
-	
-	public static float RandomAverage (float average)
+
+	public static float RandomAverage(float average)
 	{
-		float rand = UnityEngine.Random.Range (0f, 1f);
+		float rand = UnityEngine.Random.Range(0f, 1f);
 		float diff = rand - average;
-		return average + diff * diff * Mathf.Sign (diff);
+		return average + diff * diff * Mathf.Sign(diff);
 	}
-	public static float RandomAverage (float average, float min, float max)
+	public static float RandomAverage(float average, float min, float max)
 	{
 		float range = max - min;
 		float clippedAverage = (average - min) / range;
-		return min + RandomAverage (clippedAverage) * range;
+		return min + RandomAverage(clippedAverage) * range;
 	}
-	
-	public static Type [] GetExtendedTypes (Type fromType)
+
+	public static Type[] GetExtendedTypes(Type fromType)
 	{
-		var types = Assembly.GetExecutingAssembly ().GetTypes ();
-		List<Type> result = new List<Type> ();
+		var types = Assembly.GetExecutingAssembly().GetTypes();
+		List<Type> result = new List<Type>();
 		foreach (var type in types) {
-			if (fromType.IsAssignableFrom (type) && !type.IsAbstract) {
-				result.Add (type);
+			if (fromType.IsAssignableFrom(type) && !type.IsAbstract) {
+				result.Add(type);
 			}
 		}
-		return result.ToArray ();
+		return result.ToArray();
 	}
-	
-	public static object CreateInstance (Type type)
+
+	public static object CreateInstance(Type type)
 	{
 		if (type == typeof(string))
 			return "";
-		
-		var constructor = type.GetConstructor (Type.EmptyTypes);
-		return constructor != null ? constructor.Invoke (new object[] {}) : FormatterServices.GetUninitializedObject (type);
+
+		var constructor = type.GetConstructor(Type.EmptyTypes);
+		return constructor != null ? constructor.Invoke(new object[] { }) : FormatterServices.GetUninitializedObject(type);
 	}
-	public static Array CreateInstanceArray (Type type, int length)
+	public static Array CreateInstanceArray(Type type, int length)
 	{
-		var result = Array.CreateInstance (type, length);
+		var result = Array.CreateInstance(type, length);
 		for (int index = 0; index < length; index++) {
-			result.SetValue (CreateInstance (type), index);
+			result.SetValue(CreateInstance(type), index);
 		}
 		return result;
 	}
 
-	private static string PrintObject (object obj, int depth)
+	private static string PrintObject(object obj, int depth)
 	{
 		if (obj == null) {
 			return "'NULL'";
 		} else {
-			var objType = obj.GetType ();
+			var objType = obj.GetType();
 			var bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
 
-			if (objType.GetMethod ("ToString", bindingFlags, null, Type.EmptyTypes, new ParameterModifier[0]) != null) {
-				return obj.ToString ();
+			if (objType.GetMethod("ToString", bindingFlags, null, Type.EmptyTypes, new ParameterModifier[0]) != null) {
+				return obj.ToString();
 			} else {
 				var result = "";
-				var tabs = "".PadRight (depth, '\t');
-				
+				var tabs = "".PadRight(depth, '\t');
+
 				if (obj is IEnumerable) {
 					result += "[\n";
 					var enumer = obj as IEnumerable;
 					int ielement = 0;
 					foreach (var element in enumer) {
-						result += tabs + '\t' + ielement + ": " + PrintObject (element, depth + 1) + "\n";
+						result += tabs + '\t' + ielement + ": " + PrintObject(element, depth + 1) + "\n";
 						ielement++;
 					}
-					
-					result += tabs + "]";	
+
+					result += tabs + "]";
 				} else {
-					var fields = objType.GetFields (BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+					var fields = objType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
 					result += "{\n";
-				
+
 					foreach (var field in fields) {
-						result += tabs + '\t' + field.Name + ": " + PrintObject (field.GetValue (obj), depth + 1) + "\n";
+						result += tabs + '\t' + field.Name + ": " + PrintObject(field.GetValue(obj), depth + 1) + "\n";
 					}
-			
+
 					result += tabs + "}";
 				}
-				
+
 				return result;
 			}
 		}
 	}
 
-	public static GameObject CreateGameObject (string name, Transform parent)
+	public static GameObject CreateGameObject(string name, Transform parent)
 	{
-		var result = new GameObject (name);
+		var result = new GameObject(name);
 		result.transform.parent = parent;
 		result.transform.localPosition = Vector3.zero;
 		result.transform.localRotation = Quaternion.identity;
 		return result;
 	}
 
-	public static GameObject Instantiate (GameObject go, Transform parent = null)
+	public static GameObject Instantiate(GameObject go, Transform parent = null)
 	{
-		return Common.Instantiate (go, parent, Vector3.zero, Quaternion.identity, go.transform.localScale);
+		return Common.Instantiate(go, parent, Vector3.zero, Quaternion.identity, go.transform.localScale);
 	}
-	public static GameObject Instantiate (GameObject go, Transform parent, Vector3 localPosition)
+	public static GameObject Instantiate(GameObject go, Transform parent, Vector3 localPosition)
 	{
-		return Common.Instantiate (go, parent, localPosition, Quaternion.identity, go.transform.localScale);
+		return Common.Instantiate(go, parent, localPosition, Quaternion.identity, go.transform.localScale);
 	}
-	public static GameObject Instantiate (GameObject go, Transform parent, Vector3 localPosition, Quaternion localRotation)
+	public static GameObject Instantiate(GameObject go, Transform parent, Vector3 localPosition, Quaternion localRotation)
 	{
-		return Common.Instantiate (go, parent, localPosition, localRotation, go.transform.localScale);
+		return Common.Instantiate(go, parent, localPosition, localRotation, go.transform.localScale);
 	}
-	public static GameObject Instantiate (GameObject go, Transform parent, Vector3 localPosition, Quaternion localRotation, Vector3 localScale)
+	public static GameObject Instantiate(GameObject go, Transform parent, Vector3 localPosition, Quaternion localRotation, Vector3 localScale)
 	{
-		var result = (GameObject)GameObject.Instantiate (go);
+		var result = (GameObject)GameObject.Instantiate(go);
 		result.name = go.name;
 		result.transform.parent = parent;
 		result.transform.localPosition = localPosition;
@@ -391,153 +418,153 @@ public static class Common
 		return result;
 	}
 
-	public static GameObject CreatePrimitive (PrimitiveType type, Transform parent = null)
+	public static GameObject CreatePrimitive(PrimitiveType type, Transform parent = null)
 	{
-		return CreatePrimitive (type, parent, Vector3.zero, Quaternion.identity, Vector3.one);
+		return CreatePrimitive(type, parent, Vector3.zero, Quaternion.identity, Vector3.one);
 	}
-	public static GameObject CreatePrimitive (PrimitiveType type, Transform parent, Vector3 localPosition)
+	public static GameObject CreatePrimitive(PrimitiveType type, Transform parent, Vector3 localPosition)
 	{
-		return CreatePrimitive (type, parent, localPosition, Quaternion.identity, Vector3.one);
+		return CreatePrimitive(type, parent, localPosition, Quaternion.identity, Vector3.one);
 	}
-	public static GameObject CreatePrimitive (PrimitiveType type, Transform parent, Vector3 localPosition, Quaternion localRotation)
+	public static GameObject CreatePrimitive(PrimitiveType type, Transform parent, Vector3 localPosition, Quaternion localRotation)
 	{
-		return CreatePrimitive (type, parent, localPosition, localRotation, Vector3.one);
+		return CreatePrimitive(type, parent, localPosition, localRotation, Vector3.one);
 	}
-	public static GameObject CreatePrimitive (PrimitiveType type, Transform parent, Vector3 localPosition, Quaternion localRotation, Vector3 localScale)
+	public static GameObject CreatePrimitive(PrimitiveType type, Transform parent, Vector3 localPosition, Quaternion localRotation, Vector3 localScale)
 	{
-		var result = GameObject.CreatePrimitive (type);
+		var result = GameObject.CreatePrimitive(type);
 		result.transform.parent = parent;
 		result.transform.localPosition = localPosition;
 		result.transform.localRotation = localRotation;
 		result.transform.localScale = localScale;
 		return result;
 	}
-	
-	public static bool Serialize (object obj, Stream stream, bool silent = false)
+
+	public static bool Serialize(object obj, Stream stream, bool silent = false)
 	{
 		try {
-			MemoryStream memStream = new MemoryStream ();
-			BinaryFormatter formatter = new BinaryFormatter ();
-			formatter.Serialize (memStream, obj);
-			BinaryWriter writer = new BinaryWriter (stream);
+			MemoryStream memStream = new MemoryStream();
+			BinaryFormatter formatter = new BinaryFormatter();
+			formatter.Serialize(memStream, obj);
+			BinaryWriter writer = new BinaryWriter(stream);
 			var length = (int)memStream.Length;
-			writer.Write (length);
-			writer.Write (memStream.GetBuffer (), 0, length);
+			writer.Write(length);
+			writer.Write(memStream.GetBuffer(), 0, length);
 			return true;
 		} catch (Exception e) {
 			if (!silent) {
-				UnityEngine.Debug.LogWarning ("Serialization error: " + e.ToString () + "\nType: " + obj.GetType ().ToString ());
+				Log("Serialization error: " + e.ToString() + "\nType: " + obj.GetType().ToString());
 			}
 			return false;
 		}
 	}
-	public static byte [] Serialize (object obj, bool silent = false)
+	public static byte[] Serialize(object obj, bool silent = false)
 	{
 		try {
-			MemoryStream memStream = new MemoryStream ();
-			BinaryFormatter formatter = new BinaryFormatter ();
-			formatter.Serialize (memStream, obj);
+			MemoryStream memStream = new MemoryStream();
+			BinaryFormatter formatter = new BinaryFormatter();
+			formatter.Serialize(memStream, obj);
 			return memStream.ToArray();
 		} catch (Exception e) {
 			if (!silent) {
-				UnityEngine.Debug.LogWarning("Serialization error: " + e.ToString() + "\nType: " + obj.GetType().ToString());
+				Log("Serialization error: " + e.ToString() + "\nType: " + obj.GetType().ToString());
 			}
 			return null;
 		}
-		
+
 	}
-	
-	public static object Deserialize (Stream stream, bool silent = false)
+
+	public static object Deserialize(Stream stream, bool silent = false)
 	{
 		try {
-			BinaryReader reader = new BinaryReader (stream);
-			int size = reader.ReadInt32 ();
-			var bytes = reader.ReadBytes (size);
+			BinaryReader reader = new BinaryReader(stream);
+			int size = reader.ReadInt32();
+			var bytes = reader.ReadBytes(size);
 			return Deserialize(bytes, silent);
 		} catch (Exception e) {
 			if (!silent) {
-				UnityEngine.Debug.LogWarning ("Deserialization error: " + e.ToString ());
+				Log("Deserialization error: " + e.ToString());
 			}
 			return null;
 		}
 	}
-	public static object Deserialize (byte [] bytes, bool silent = false)
+	public static object Deserialize(byte[] bytes, bool silent = false)
 	{
 		try {
-			MemoryStream memStream = new MemoryStream (bytes);
-			var formatter = new BinaryFormatter ();
-			return formatter.Deserialize (memStream);
+			MemoryStream memStream = new MemoryStream(bytes);
+			var formatter = new BinaryFormatter();
+			return formatter.Deserialize(memStream);
 		} catch (Exception e) {
 			if (!silent) {
-				UnityEngine.Debug.LogWarning("Deserialization error: " + e.ToString());
+				Log("Deserialization error: " + e.ToString());
 			}
 			return null;
 		}
 	}
-	public static T Deserialize<T> (Stream stream, bool silent = false)
+	public static T Deserialize<T>(Stream stream, bool silent = false)
 	{
 		return (T)Deserialize(stream, silent);
 	}
-	public static T Deserialize<T> (byte [] bytes, bool silent = false)
+	public static T Deserialize<T>(byte[] bytes, bool silent = false)
 	{
 		return (T)Deserialize(bytes, silent);
 	}
-	
-	public static float RangeSearch<T, K> (T subject, IList<K> list, IComparer<T, K> comparer = null) 
+
+	public static float RangeSearch<T, K>(T subject, IList<K> list, IComparer<T, K> comparer = null)
 	{
 		if (comparer == null) {
 			comparer = ComparerFactory<T, K>.Default;
 		}
-		
+
 		int min = -1;
 		int max = list.Count;
 		while (true) {
 			int range = max - min;
 			if (range != 1) {
 				int mean = min + (range >> 1);
-				switch (comparer.Compare (subject, list [mean])) {
-				case 0:
-					return mean;
-				case -1:
-					max = mean;
-					break;
-				case 1:
-					min = mean;
-					break;
+				switch (comparer.Compare(subject, list[mean])) {
+					case 0:
+						return mean;
+					case -1:
+						max = mean;
+						break;
+					case 1:
+						min = mean;
+						break;
 				}
 			} else {
 				return min + 0.5f;
 			}
-		}	
+		}
 	}
-	
-	public static void CloneDirectory (string sourceDirName, string destDirName)
+
+	public static void CloneDirectory(string sourceDirName, string destDirName)
 	{
 		// Get the subdirectories for the specified directory.
-		DirectoryInfo dir = new DirectoryInfo (sourceDirName);
-		DirectoryInfo[] dirs = dir.GetDirectories ();
+		DirectoryInfo dir = new DirectoryInfo(sourceDirName);
+		DirectoryInfo[] dirs = dir.GetDirectories();
 
 		if (!dir.Exists) {
-			throw new DirectoryNotFoundException ("Source directory does not exist or could not be found: " + sourceDirName);
+			throw new DirectoryNotFoundException("Source directory does not exist or could not be found: " + sourceDirName);
 		}
 
 		// If the destination directory already exists, delete it. 
-		if (Directory.Exists (destDirName)) {
-			Directory.Delete (destDirName, true);
+		if (Directory.Exists(destDirName)) {
+			Directory.Delete(destDirName, true);
 		}
-		
-		Directory.CreateDirectory (destDirName);
+
+		Directory.CreateDirectory(destDirName);
 
 		// Get the files in the directory and copy them to the new location.
-		FileInfo[] files = dir.GetFiles ();
+		FileInfo[] files = dir.GetFiles();
 		foreach (FileInfo file in files) {
-			string temppath = Path.Combine (destDirName, file.Name);
-			file.CopyTo (temppath, false);
+			string temppath = Path.Combine(destDirName, file.Name);
+			file.CopyTo(temppath, false);
 		}
 
 		foreach (DirectoryInfo subdir in dirs) {
-			string temppath = Path.Combine (destDirName, subdir.Name);
-			CloneDirectory (subdir.FullName, temppath);
+			string temppath = Path.Combine(destDirName, subdir.Name);
+			CloneDirectory(subdir.FullName, temppath);
 		}
 	}
 
@@ -562,13 +589,13 @@ public static class Common
 		processInfo.RedirectStandardError = true;
 		processInfo.RedirectStandardOutput = true;
 		processInfo.StandardOutputEncoding = new System.Text.UnicodeEncoding();
-		
+
 		outputStream = null;
 		errorStream = null;
 		exitCode = -1;
 		process = System.Diagnostics.Process.Start(processInfo);
 		process.WaitForExit();
-		
+
 		outputStream = process.StandardOutput.ReadToEnd();
 		errorStream = process.StandardError.ReadToEnd();
 		exitCode = process.ExitCode;
@@ -576,13 +603,12 @@ public static class Common
 		process.Close();
 	}
 
-    public static void SetLayerForAllChild(GameObject go, int layer)
-    {
-        foreach ( Transform trans in go.GetComponentsInChildren<Transform>(true) )
-        {
-            trans.gameObject.layer = layer;
-        }
-    }
+	public static void SetLayerForAllChild(GameObject go, int layer)
+	{
+		foreach (Transform trans in go.GetComponentsInChildren<Transform>(true)) {
+			trans.gameObject.layer = layer;
+		}
+	}
 
 	#region
 	public static Color[] COLORS = new Color[60] {
@@ -647,10 +673,10 @@ public static class Common
 		new Color (0xce / 255.0f, 0x6d / 255.0f, 0xbd / 255.0f),
 		new Color (0xde / 255.0f, 0x9e / 255.0f, 0xd6 / 255.0f)
 	};
-	
-	public static Color RandomColor ()
+
+	public static Color RandomColor()
 	{
-		return COLORS [UnityEngine.Random.Range (0, COLORS.Length)];
+		return COLORS[UnityEngine.Random.Range(0, COLORS.Length)];
 	}
 	#endregion
 }
