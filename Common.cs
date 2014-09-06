@@ -544,11 +544,12 @@ public static class Common
 	{
 		// Get the subdirectories for the specified directory.
 		DirectoryInfo dir = new DirectoryInfo(sourceDirName);
-		DirectoryInfo[] dirs = dir.GetDirectories();
 
 		if (!dir.Exists) {
 			throw new DirectoryNotFoundException("Source directory does not exist or could not be found: " + sourceDirName);
 		}
+
+		DirectoryInfo[] dirs = dir.GetDirectories();
 
 		// If the destination directory already exists, delete it. 
 		if (Directory.Exists(destDirName)) {
