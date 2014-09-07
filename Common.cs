@@ -110,7 +110,6 @@ public static class Common
 			File.AppendAllText("log.txt", "info: " + log.Replace("\n", "\n\t") + "\n");
 		}
 	}
-
 	public static void LogWarning(object obj, bool forceToFile = false)
 	{
 		string log = PrintObject(obj, 0);
@@ -120,7 +119,6 @@ public static class Common
 			File.AppendAllText("log.txt", "*warning*: " + log.Replace("\n", "\n\t") + "\n");
 		}
 	}
-
 	public static void LogError(object obj, bool forceToFile = false)
 	{
 		string log = PrintObject(obj, 0);
@@ -128,6 +126,49 @@ public static class Common
 		UnityEngine.Debug.LogError(log);
 		if (Application.isEditor || forceToFile) {
 			File.AppendAllText("log.txt", "**error**: " + log.Replace("\n", "\n\t") + "\n");
+		}
+	}
+	public static string PrintObject(object obj)
+	{
+		return PrintObject(obj, 0);
+	}
+	private static string PrintObject(object obj, int depth)
+	{
+		if (obj == null) {
+			return "'NULL'";
+		} else {
+			var objType = obj.GetType();
+			var bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+
+			if (objType.GetMethod("ToString", bindingFlags, null, Type.EmptyTypes, new ParameterModifier[0]) != null) {
+				return obj.ToString();
+			} else {
+				var result = "";
+				var tabs = "".PadRight(depth, '\t');
+
+				if (obj is IEnumerable) {
+					result += "[\n";
+					var enumer = obj as IEnumerable;
+					int ielement = 0;
+					foreach (var element in enumer) {
+						result += tabs + '\t' + ielement + ": " + PrintObject(element, depth + 1) + "\n";
+						ielement++;
+					}
+
+					result += tabs + "]";
+				} else {
+					var fields = objType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+					result += "{\n";
+
+					foreach (var field in fields) {
+						result += tabs + '\t' + field.Name + ": " + PrintObject(field.GetValue(obj), depth + 1) + "\n";
+					}
+
+					result += tabs + "}";
+				}
+
+				return result;
+			}
 		}
 	}
 
@@ -348,46 +389,6 @@ public static class Common
 		return result;
 	}
 
-	private static string PrintObject(object obj, int depth)
-	{
-		if (obj == null) {
-			return "'NULL'";
-		} else {
-			var objType = obj.GetType();
-			var bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
-
-			if (objType.GetMethod("ToString", bindingFlags, null, Type.EmptyTypes, new ParameterModifier[0]) != null) {
-				return obj.ToString();
-			} else {
-				var result = "";
-				var tabs = "".PadRight(depth, '\t');
-
-				if (obj is IEnumerable) {
-					result += "[\n";
-					var enumer = obj as IEnumerable;
-					int ielement = 0;
-					foreach (var element in enumer) {
-						result += tabs + '\t' + ielement + ": " + PrintObject(element, depth + 1) + "\n";
-						ielement++;
-					}
-
-					result += tabs + "]";
-				} else {
-					var fields = objType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-					result += "{\n";
-
-					foreach (var field in fields) {
-						result += tabs + '\t' + field.Name + ": " + PrintObject(field.GetValue(obj), depth + 1) + "\n";
-					}
-
-					result += tabs + "}";
-				}
-
-				return result;
-			}
-		}
-	}
-
 	public static GameObject CreateGameObject(string name, Transform parent)
 	{
 		var result = new GameObject(name);
@@ -540,34 +541,47 @@ public static class Common
 		}
 	}
 
-	public static void CloneDirectory(string sourceDirName, string destDirName)
+	public static void CloneFilesAndDirectories(string[] sources, string destination, bool merge = false)
 	{
-		// Get the subdirectories for the specified directory.
-		DirectoryInfo dir = new DirectoryInfo(sourceDirName);
-
-		if (!dir.Exists) {
-			throw new DirectoryNotFoundException("Source directory does not exist or could not be found: " + sourceDirName);
+		if (merge == false && Directory.Exists(destination)) {
+			Directory.Delete(destination, true);
 		}
 
-		DirectoryInfo[] dirs = dir.GetDirectories();
-
-		// If the destination directory already exists, delete it. 
-		if (Directory.Exists(destDirName)) {
-			Directory.Delete(destDirName, true);
+		foreach (var source in sources) {
+			if (Directory.Exists(source)) {
+				CloneDirectory(source, Path.Combine(destination, Path.GetDirectoryName(source)), false);
+			} else if (File.Exists(source)) {
+				File.Copy(source, Path.Combine(destination, Path.GetFileName(source)));
+			}
+		}
+	}
+	public static void CloneDirectory(string sourceDirName, string destDirName, bool merge = false)
+	{
+		var sourceDir = new DirectoryInfo(sourceDirName);
+		var destDir = new DirectoryInfo(destDirName);
+		if (merge == false && destDir.Exists) {
+			destDir.Delete(true);
+		}
+		CloneDirectory(sourceDir, destDir);
+	}
+	private static void CloneDirectory(DirectoryInfo sourceDir, DirectoryInfo destDir)
+	{
+		if (!sourceDir.Exists) {
+			throw new DirectoryNotFoundException("Source directory does not exist or could not be found: " + sourceDir.FullName);
+		}
+		
+		if (!destDir.Exists) {
+			destDir.Create();
 		}
 
-		Directory.CreateDirectory(destDirName);
-
-		// Get the files in the directory and copy them to the new location.
-		FileInfo[] files = dir.GetFiles();
-		foreach (FileInfo file in files) {
-			string temppath = Path.Combine(destDirName, file.Name);
-			file.CopyTo(temppath, false);
+		foreach (FileInfo file in sourceDir.GetFiles()) {
+			string temppath = Path.Combine(destDir.FullName, file.Name);
+			file.CopyTo(temppath, true);
 		}
 
-		foreach (DirectoryInfo subdir in dirs) {
-			string temppath = Path.Combine(destDirName, subdir.Name);
-			CloneDirectory(subdir.FullName, temppath);
+		foreach (DirectoryInfo subdir in sourceDir.GetDirectories()) {
+			string temppath = Path.Combine(destDir.FullName, subdir.Name);
+			CloneDirectory(subdir, new DirectoryInfo(temppath));
 		}
 	}
 
