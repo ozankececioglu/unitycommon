@@ -50,24 +50,36 @@ public class PropertyDrawer
 	public struct DrawerArgs
 	{
 		public string name;
-		public Type type;
+		public Description description;
 		public object value;
 		public int depth;
+		// TODO nullpolicy will be fed from description & drawer
 		public NullPolicy nullPolicy;
-		public Label label;
+
+		private Type _type;
+		public Type type
+		{
+			get { return _type; }
+			set { _type = value; _drawer = PropertyDrawer.GetDrawer(_type); }
+		}
+
+		private PropertyDrawer _drawer;
+		public PropertyDrawer drawer { get { return _drawer; } }
 	}
 
-	public class Label : Attribute
+	public class Description : Attribute
 	{
-		public string label;
+		public string title;
+		public NullPolicy nullPolicy;
 
-		public Label(string tlabel = "")
+		public Description(string atitle = "", NullPolicy anullPolicy = NullPolicy.InstantiateNullFields)
 		{
-			label = tlabel;
+			title = atitle;
+			nullPolicy = anullPolicy;
 		}
 	}
 
-	public class IntRange : Label
+	public class IntRange : Description
 	{
 		public int min;
 		public int max;
@@ -78,15 +90,15 @@ public class PropertyDrawer
 			min = amin;
 			max = amax;
 		}
-		public IntRange(string tlabel, int amin, int amax)
-			: base(tlabel)
+		public IntRange(string atitle, int amin, int amax)
+			: base(atitle)
 		{
 			min = amin;
 			max = amax;
 		}
 	}
 
-	public class FloatRange : Label
+	public class FloatRange : Description
 	{
 		public float min;
 		public float max;
@@ -97,8 +109,8 @@ public class PropertyDrawer
 			min = amin;
 			max = amax;
 		}
-		public FloatRange(string tlabel, float amin, float amax)
-			: base(tlabel)
+		public FloatRange(string atitle, float amin, float amax)
+			: base(atitle)
 		{
 			min = amin;
 			max = amax;
@@ -115,9 +127,9 @@ public class PropertyDrawer
 		}
 	}
 
-	public static string sizeText = "Size";
-	public static string nullText = "'Null'";
-	public static string createText = "Create";
+	public static string translationSize = "Size";
+	public static string translationNull = "'Null'";
+	public static string translationInstantiate = "Create";
 
 	//	private static UnityObjectDrawer unityObjectDrawer;
 	private static EnumDrawer enumDrawer;
@@ -191,8 +203,7 @@ public class PropertyDrawer
 			args.value = value;
 			args.depth = string.IsNullOrEmpty(name) ? -1 : 0;
 			args.nullPolicy = nullPolicy;
-			var result = GetDrawer(args.type).OnLabelAndValue(ref args);
-			return result;
+			return args.drawer.OnTitleAndValue(ref args);
 		} else {
 			return false;
 		}
@@ -208,15 +219,16 @@ public class PropertyDrawer
 		args.type = value.GetType();
 		args.value = value;
 		args.depth = string.IsNullOrEmpty(name) ? -1 : 0;
+		// TODO
 		args.nullPolicy = nullPolicy;
-		var result = GetDrawer(args.type).OnLabelAndValue(ref args);
+		var result = args.drawer.OnTitleAndValue(ref args);
 		if (result) {
 			value = (T)args.value;
 		}
 		return result;
 	}
 
-	public virtual bool OnLabelAndValue(ref DrawerArgs args)
+	public virtual bool OnTitleAndValue(ref DrawerArgs args)
 	{
 		GUILayout.BeginHorizontal();
 		GUICommon.FieldLabel(args.name, args.depth);
@@ -229,6 +241,10 @@ public class PropertyDrawer
 	{
 		GUILayout.FlexibleSpace();
 		return false;
+	}
+	public virtual NullPolicy GetNullPolicy(ref DrawerArgs args)
+	{
+		return NullPolicy.InstantiateNullFields;
 	}
 }
 
@@ -247,8 +263,8 @@ internal class EnumDrawer : PropertyDrawer
 			List<string> names = new List<string>();
 			var members = type.GetMembers(BindingFlags.DeclaredOnly | BindingFlags.Static | BindingFlags.Public);
 			foreach (var member in members) {
-				var label = (Label)Attribute.GetCustomAttribute(member, typeof(Label));
-				names.Add(label == null ? member.Name : label.label);
+				var description = (Description)Attribute.GetCustomAttribute(member, typeof(Description));
+				names.Add(description == null ? member.Name : description.title);
 			}
 			result = names.ToArray();
 			cachedNames.Add(type, result);
@@ -300,12 +316,20 @@ internal class EnumDrawer : PropertyDrawer
 
 internal class ListDrawer : PropertyDrawer
 {
-	public override bool OnLabelAndValue(ref DrawerArgs args)
+	private static IList listToBeMarkedToDelete = null;
+	public const float smallButtonWidth = 30f;
+
+	public override bool OnTitleAndValue(ref DrawerArgs args)
 	{
 		var list = args.value as IList;
 
-		Type elementType = args.type.GetGenericArguments()[0];
-		var drawer = PropertyDrawer.GetDrawer(elementType);
+		var targs = new DrawerArgs();
+		targs.type = args.type.GetGenericArguments()[0];
+		targs.depth = args.depth + 1;
+		// TODO
+		targs.nullPolicy = args.nullPolicy;
+
+		var drawer = targs.drawer;
 		if (drawer == null)
 			return false;
 
@@ -319,8 +343,8 @@ internal class ListDrawer : PropertyDrawer
 			} else if (args.nullPolicy == NullPolicy.ShowNullFields) {
 				GUILayout.BeginHorizontal();
 				GUICommon.FieldLabel(args.name, args.depth);
-				GUILayout.Label(PropertyDrawer.nullText);
-				if (GUILayout.Button(PropertyDrawer.createText)) {
+				GUILayout.Label(PropertyDrawer.translationNull);
+				if (GUILayout.Button(PropertyDrawer.translationInstantiate)) {
 					list = (IList)Common.CreateInstance(args.type);
 					args.value = list;
 					changed = true;
@@ -335,7 +359,7 @@ internal class ListDrawer : PropertyDrawer
 
 		GUILayout.BeginHorizontal();
 		GUICommon.FieldLabel(args.name, args.depth);
-		GUILayout.Label(PropertyDrawer.sizeText + ": ");
+		GUILayout.Label(PropertyDrawer.translationSize + ": ");
 
 		int count = list.Count;
 		if (GUICommon.IntField(ref count)) {
@@ -343,25 +367,57 @@ internal class ListDrawer : PropertyDrawer
 			if (count < list.Count) {
 				args.type.GetMethod("RemoveRange").Invoke(list, new object[] { count, list.Count - count });
 			} else if (count > list.Count) {
-				args.type.GetMethod("AddRange").Invoke(list, new object[] { Array.CreateInstance(elementType, count - list.Count) });
+				args.type.GetMethod("AddRange").Invoke(list, new object[] { Array.CreateInstance(targs.type, count - list.Count) });
 			}
 		}
+
+		if (args.nullPolicy != NullPolicy.HideNullFields) {
+			if (GUILayout.Button("+", GUILayout.Width(smallButtonWidth))) {
+				if (args.nullPolicy == NullPolicy.ShowNullFields) {
+					list.Add(null);
+				} else {
+					list.Add(Common.CreateInstance(targs.type));
+				}
+			}
+		}
+
+		var deleteEnabled = listToBeMarkedToDelete == list;
+		if (deleteEnabled) {
+			if (GUILayout.Button("O", GUILayout.Width(smallButtonWidth))) {
+				listToBeMarkedToDelete = null;
+			}
+		} else if (list.Count > 0) {
+			if (GUILayout.Button("-", GUILayout.Width(smallButtonWidth))) {
+				listToBeMarkedToDelete = list;
+			}
+		}
+
 		GUILayout.EndHorizontal();
 
-		var targs = new DrawerArgs();
-		targs.type = elementType;
-		targs.depth = args.depth + 1;
-		targs.nullPolicy = args.nullPolicy;
-
+		int deleteIndex = -1;
 		GUILayout.BeginVertical();
 		for (int index = 0; index < count; index++) {
+			if (deleteEnabled) {
+				GUILayout.BeginHorizontal();
+			}
 			targs.name = "#" + index;
 			targs.value = list[index];
-			if (drawer.OnLabelAndValue(ref targs)) {
+			if (drawer.OnTitleAndValue(ref targs)) {
 				list[index] = targs.value;
 				changed = true;
 			}
+			if (deleteEnabled) {
+				if (GUILayout.Button("-", GUILayout.Width(smallButtonWidth))) {
+					deleteIndex = index;
+				}
+				GUILayout.EndHorizontal();
+			}
 		}
+		if (deleteEnabled && deleteIndex != -1) {
+			list.RemoveAt(deleteIndex);
+			changed = true;
+		}
+
 		GUILayout.EndVertical();
 
 		return changed;
@@ -376,27 +432,31 @@ internal class ListDrawer : PropertyDrawer
 
 internal class ArrayDrawer : PropertyDrawer
 {
-	public override bool OnLabelAndValue(ref DrawerArgs args)
+	public override bool OnTitleAndValue(ref DrawerArgs args)
 	{
 		var array = args.value as Array;
-		Type elementType = args.type.GetElementType();
-		var drawer = PropertyDrawer.GetDrawer(elementType);
+
+		var targs = new DrawerArgs();
+		targs.type = args.type.GetElementType();
+		targs.depth = args.depth + 1;
+
+		var drawer = targs.drawer;
 		if (drawer == null)
 			return false;
 
 		var changed = false;
 		if (array == null) {
 			if (args.nullPolicy == NullPolicy.InstantiateNullFields) {
-				array = Common.CreateInstanceArray(elementType, 0);
+				array = Common.CreateInstanceArray(targs.type, 0);
 				args.value = array;
 				changed = true;
 
 			} else if (args.nullPolicy == NullPolicy.ShowNullFields) {
 				GUILayout.BeginHorizontal();
 				GUICommon.FieldLabel(args.name, args.depth);
-				GUILayout.Label(PropertyDrawer.nullText);
-				if (GUILayout.Button(PropertyDrawer.createText)) {
-					array = Common.CreateInstanceArray(elementType, 0);
+				GUILayout.Label(PropertyDrawer.translationNull);
+				if (GUILayout.Button(PropertyDrawer.translationInstantiate)) {
+					array = Common.CreateInstanceArray(targs.type, 0);
 					args.value = array;
 					changed = true;
 				}
@@ -410,27 +470,23 @@ internal class ArrayDrawer : PropertyDrawer
 
 		GUILayout.BeginHorizontal();
 		GUICommon.FieldLabel(args.name, args.depth);
-		GUILayout.Label(PropertyDrawer.sizeText + ": ");
+		GUILayout.Label(PropertyDrawer.translationSize + ": ");
 
 		int count = array.Length;
 		if (GUICommon.IntField(ref count)) {
 			changed = true;
 			var parameters = new object[] { array, count };
-			typeof(Array).GetMethod("Resize").MakeGenericMethod(elementType).Invoke(null, parameters);
+			typeof(Array).GetMethod("Resize").MakeGenericMethod(targs.type).Invoke(null, parameters);
 			array = parameters[0] as Array;
 			args.value = array;
 		}
 		GUILayout.EndHorizontal();
 
-		var targs = new DrawerArgs();
-		targs.type = elementType;
-		targs.depth = args.depth + 1;
-
 		GUILayout.BeginVertical();
 		for (int index = 0; index < count; index++) {
 			targs.name = "#" + index;
 			targs.value = array.GetValue(index);
-			if (drawer.OnLabelAndValue(ref targs)) {
+			if (drawer.OnTitleAndValue(ref targs)) {
 				array.SetValue(targs.value, index);
 				changed = true;
 			}
@@ -447,26 +503,27 @@ internal class ArrayDrawer : PropertyDrawer
 
 internal class ObjectDrawer : PropertyDrawer
 {
-	public abstract class LabelDescription
+	public abstract class AccessorInfo
 	{
-		public Label label;
+		public Description description;
 
-		public LabelDescription(Label alabel)
+		public AccessorInfo(Description adescription)
 		{
-			label = alabel;
+			description = adescription;
 		}
 
-		public string Name { get { return label.label; } }
+		public string Name { get { return description.title; } }
 		public abstract object GetValue(object target);
 		public abstract void SetValue(object target, object value);
-		public abstract Type GetLabelType();
+		public abstract Type GetAccessorType();
+		public virtual bool IsReadOnly() { return false; }
 	}
 
-	public class FieldDescription : LabelDescription
+	public class FieldAccessorInfo : AccessorInfo
 	{
 		public FieldInfo field;
 
-		public FieldDescription(Label label, FieldInfo tfield)
+		public FieldAccessorInfo(Description label, FieldInfo tfield)
 			: base(label)
 		{
 			field = tfield;
@@ -480,17 +537,17 @@ internal class ObjectDrawer : PropertyDrawer
 		{
 			field.SetValue(target, value);
 		}
-		public override Type GetLabelType()
+		public override Type GetAccessorType()
 		{
 			return field.FieldType;
 		}
 	}
 
-	public class PropertyDescription : LabelDescription
+	public class PropertyAccessorInfo : AccessorInfo
 	{
 		public PropertyInfo property;
 
-		public PropertyDescription(Label label, PropertyInfo tproperty)
+		public PropertyAccessorInfo(Description label, PropertyInfo tproperty)
 			: base(label)
 		{
 			property = tproperty;
@@ -504,43 +561,47 @@ internal class ObjectDrawer : PropertyDrawer
 		{
 			property.SetValue(target, value, null);
 		}
-		public override Type GetLabelType()
+		public override Type GetAccessorType()
 		{
 			return property.PropertyType;
 		}
+		public override bool IsReadOnly()
+		{
+			return property.CanWrite;
+		}
 	}
 
-	static Dictionary<Type, List<LabelDescription>> descriptions = new Dictionary<Type, List<LabelDescription>>();
+	static Dictionary<Type, List<AccessorInfo>> descriptions = new Dictionary<Type, List<AccessorInfo>>();
 
-	public static List<LabelDescription> GetDescriptions(Type type)
+	public static List<AccessorInfo> GetDescriptions(Type type)
 	{
-		List<LabelDescription> result = null;
+		List<AccessorInfo> result = null;
 		if (!descriptions.TryGetValue(type, out result)) {
-			Type customLabelType = typeof(Label);
-			result = new List<LabelDescription>();
+			Type descriptionType = typeof(Description);
+			result = new List<AccessorInfo>();
 			var bindingFlags = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance;
 
 			foreach (var member in type.GetMembers(bindingFlags)) {
 				if (member.MemberType == MemberTypes.Property) {
 					var property = member as PropertyInfo;
-					var customLabel = (Label)Attribute.GetCustomAttribute(property, customLabelType);
+					var customLabel = (Description)Attribute.GetCustomAttribute(property, descriptionType);
 					if (customLabel != null) {
 						var drawer = PropertyDrawer.GetDrawer(property.PropertyType);
 						if (drawer != null) {
-							result.Add(new PropertyDescription(customLabel, property));
+							result.Add(new PropertyAccessorInfo(customLabel, property));
 						} else {
-							Common.LogWarning(type + "." + property.Name + " has Label attribute but there is no drawers for " + property.PropertyType);
+							Common.LogWarning(type + "." + property.Name + " has Description attribute but there is no drawers for " + property.PropertyType);
 						}
 					}
 				} else if (member.MemberType == MemberTypes.Field) {
 					var field = member as FieldInfo;
-					var customLabel = (Label)Attribute.GetCustomAttribute(field, customLabelType);
-					if (customLabel != null) {
+					var description = (Description)Attribute.GetCustomAttribute(field, descriptionType);
+					if (description != null) {
 						var drawer = PropertyDrawer.GetDrawer(field.FieldType);
 						if (drawer != null) {
-							result.Add(new FieldDescription(customLabel, field));
+							result.Add(new FieldAccessorInfo(description, field));
 						} else {
-							Common.LogWarning(type + "." + field.Name + " has Label attribute but there is no drawers for " + field.FieldType);
+							Common.LogWarning(type + "." + field.Name + " has Description attribute but there is no drawers for " + field.FieldType);
 						}
 					}
 				}
@@ -553,7 +614,7 @@ internal class ObjectDrawer : PropertyDrawer
 		return result;
 	}
 
-	public override bool OnLabelAndValue(ref DrawerArgs args)
+	public override bool OnTitleAndValue(ref DrawerArgs args)
 	{
 		var changed = false;
 		if (args.value == null) {
@@ -577,22 +638,21 @@ internal class ObjectDrawer : PropertyDrawer
 			}
 		}
 
-		var descriptions = ObjectDrawer.GetDescriptions(args.type);
+		var accessors = ObjectDrawer.GetDescriptions(args.type);
 		var targs = new PropertyDrawer.DrawerArgs();
 		targs.depth = args.depth + 1;
 		targs.nullPolicy = args.nullPolicy;
 
-		if (descriptions.Count == 1) {
-			var description = descriptions[0];
-			var type = description.GetLabelType();
-			var drawer = PropertyDrawer.GetDrawer(type);
+		if (accessors.Count == 1) {
+			var accessor = accessors[0];
+			targs.type = accessor.GetAccessorType();
+			var drawer = targs.drawer;
 			if (drawer != null) {
 				targs.name = args.name;
-				targs.type = type;
-				targs.value = description.GetValue(args.value);
-				targs.label = description.label;
-				if (drawer.OnLabelAndValue(ref targs)) {
-					description.SetValue(args.value, targs.value);
+				targs.value = accessor.GetValue(args.value);
+				targs.description = accessor.description;
+				if (drawer.OnTitleAndValue(ref targs)) {
+					accessor.SetValue(args.value, targs.value);
 					changed = true;
 				}
 			}
@@ -604,16 +664,15 @@ internal class ObjectDrawer : PropertyDrawer
 				GUILayout.EndHorizontal();
 			}
 
-			foreach (var description in descriptions) {
-				var type = description.GetLabelType();
-				var drawer = PropertyDrawer.GetDrawer(type);
+			foreach (var accessor in accessors) {
+				targs.type = accessor.GetAccessorType();
+				var drawer = targs.drawer;
 				if (drawer != null) {
 					targs.name = args.name;
-					targs.type = type;
-					targs.value = description.GetValue(args.value);
-					targs.label = description.label;
-					if (drawer.OnLabelAndValue(ref targs)) {
-						description.SetValue(args.value, targs.value);
+					targs.value = accessor.GetValue(args.value);
+					targs.description = accessor.description;
+					if (drawer.OnTitleAndValue(ref targs)) {
+						accessor.SetValue(args.value, targs.value);
 						changed = true;
 					}
 				}
@@ -650,7 +709,7 @@ internal class DynamicEnumDrawer : PropertyDrawer
 [CustomPropertyDrawer(typeof(string))]
 internal class StringDrawer : PropertyDrawer
 {
-	public override bool OnLabelAndValue(ref PropertyDrawer.DrawerArgs args)
+	public override bool OnTitleAndValue(ref PropertyDrawer.DrawerArgs args)
 	{
 		if (args.value == null) {
 			switch (args.nullPolicy) {
@@ -663,7 +722,7 @@ internal class StringDrawer : PropertyDrawer
 					var changed = false;
 					GUILayout.BeginHorizontal();
 					GUICommon.FieldLabel(args.name, args.depth);
-					if (GUILayout.Button(PropertyDrawer.createText)) {
+					if (GUILayout.Button(PropertyDrawer.translationInstantiate)) {
 						args.value = "";
 						changed = true;
 					}
@@ -690,10 +749,10 @@ internal class StringDrawer : PropertyDrawer
 [CustomPropertyDrawer(typeof(int))]
 internal class IntDrawer : PropertyDrawer
 {
-	public override bool OnLabelAndValue(ref DrawerArgs args)
+	public override bool OnTitleAndValue(ref DrawerArgs args)
 	{
 		int ivalue = (int)args.value;
-		var intRange = args.label as IntRange;
+		var intRange = args.description as IntRange;
 
 		if (intRange != null) {
 			if (GUICommon.IntSliderWithLabel(args.name, ref ivalue, intRange.min, intRange.max)) {
@@ -724,10 +783,10 @@ internal class IntDrawer : PropertyDrawer
 [CustomPropertyDrawer(typeof(float))]
 internal class FloatDrawer : PropertyDrawer
 {
-	public override bool OnLabelAndValue(ref DrawerArgs args)
+	public override bool OnTitleAndValue(ref DrawerArgs args)
 	{
 		float fvalue = (float)args.value;
-		var floatRange = args.label as FloatRange;
+		var floatRange = args.description as FloatRange;
 
 		if (floatRange != null) {
 			if (GUICommon.FloatSliderWithLabel(args.name, ref fvalue, floatRange.min, floatRange.max)) {
@@ -757,7 +816,7 @@ internal class FloatDrawer : PropertyDrawer
 [CustomPropertyDrawer(typeof(double))]
 internal class DoubleDrawer : PropertyDrawer
 {
-	public override bool OnLabelAndValue(ref DrawerArgs args)
+	public override bool OnTitleAndValue(ref DrawerArgs args)
 	{
 		double dvalue = (double)args.value;
 		GUILayout.BeginHorizontal();
