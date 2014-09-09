@@ -33,8 +33,11 @@ public static class GUICommon
 	
 	static GUICommon()
 	{
-		_staticRectStyle = new GUIStyle();
-		_staticRectTexture = new Texture2D(1, 1);
+		colorBoxStyle = new GUIStyle(GUI.skin.box);
+		colorBoxTexture = new Texture2D(1, 1);
+		colorPickerTexture = new Texture2D(256, 256);
+		colorHueStyle = new GUIStyle(GUI.skin.box);
+		colorHueStyle.normal.background = Resources.Load("colorHueTexture") as Texture2D;
 	}
 	
 	public static void PushPostGui() {
@@ -49,6 +52,46 @@ public static class GUICommon
 	public static void AddPostGui(Action action) {
 		var actionContainer = postGuiActions.Peek();
 		actionContainer.action += action;
+	}
+
+	public enum PopUpState
+	{
+		Hidden,
+		Shown,
+		OK
+	}
+
+	static int popUpControl = -1;
+	static PopUpState popUpState = PopUpState.Hidden;
+	static Func<PopUpState> popUpView;
+	public static void ShowPopUp(int id, Func<PopUpState> view)
+	{
+		popUpState = PopUpState.Shown;
+		popUpControl = id;
+		popUpView = view;
+	}
+	public static PopUpState CheckPopUp(int id)
+	{
+		if (popUpControl != -1 && popUpState == PopUpState.OK) {
+			popUpState = PopUpState.Hidden;
+			popUpControl = -1;
+			popUpView = null;
+		}
+		return popUpState;
+	}
+	public static void DrawPopUp()
+	{
+		if (popUpControl != -1) {
+			if (popUpState == PopUpState.Shown) {
+				popUpState = popUpView();
+
+			} else if (popUpState == PopUpState.OK && Event.current.type == EventType.Layout) {
+				popUpState = PopUpState.Hidden;
+				popUpControl = -1;
+				popUpView = null;
+				Debug.Log("Canceled");
+			}
+		}
 	}
 	
 	public static GUIContent TempContent (string text)
@@ -78,18 +121,26 @@ public static class GUICommon
 	
 	public static void ClearCache ()
 	{
-		comboControl = 0;
+		popUpControl = 0;
 		textCacheControl = 0;
+		comboControl = 0;
 	}
 
-	private static Texture2D _staticRectTexture;
-	private static GUIStyle _staticRectStyle;
-	public static void Rect(Color color, params GUILayoutOption[] options)
+	private static Texture2D colorBoxTexture;
+	private static GUIStyle colorBoxStyle;
+	public static void ColorBox(Color color, params GUILayoutOption[] options)
 	{
-		_staticRectTexture.SetPixel(0, 0, color);
-		_staticRectTexture.Apply();
-		_staticRectStyle.normal.background = _staticRectTexture;
-		GUILayout.Box(GUIContent.none, _staticRectStyle, options);
+		colorBoxTexture.SetPixel(0, 0, color);
+		colorBoxTexture.Apply();
+		colorBoxStyle.normal.background = colorBoxTexture;
+		GUILayout.Box(GUIContent.none, colorBoxStyle, options);
+	}
+	public static bool ColorButton(Color color, params GUILayoutOption[] options)
+	{
+		colorBoxTexture.SetPixel(0, 0, color);
+		colorBoxTexture.Apply();
+		colorBoxStyle.normal.background = colorBoxTexture;
+		return GUILayout.Button(GUIContent.none, colorBoxStyle, options);
 	}
 	
 	static int textCacheControl = 0;
@@ -302,11 +353,100 @@ public static class GUICommon
 		
 		return changed;
 	}
+
+	static int colorHash = "Color".GetHashCode();
+	static int colorControl = 0;
+	static Color colorResult;
+	static bool colorHasResult;
+	static Rect colorRect;
+
+	static Texture2D colorPickerTexture;
+	static void PaintColorPicker(float hue)
+	{
+		var width = colorPickerTexture.width;
+		var height = colorPickerTexture.height;
+		for (int x = 0; x < width; x++) {
+			for (int y = 0; y < height; y++) {
+				colorPickerTexture.SetPixel(x, y, Common.HSVToColor(hue, (float)x / width, (float)y / height));
+			}
+		}
+	}
+
+	static GUIStyle colorHueStyle;
 	public static bool ColorField(ref Color color)
 	{
+		int id = GUIUtility.GetControlID(colorHash, FocusType.Passive);
+		
+		if (GUICommon.ColorButton(color, GUILayout.Width(45f), GUILayout.Height(12f))) {
+			colorControl = id;
+		}
+
+		if (colorHasResult && colorControl == id) {
+
+		}
+
 		return false;
 	}
-	static int popupListHash = "Combo".GetHashCode();
+
+//	static int comboHash = "Combo".GetHashCode();
+//	static int comboResult = -1;
+//	public static bool ComboField(ref int selection, string[] fields, params GUILayoutOption[] options)
+//	{
+//		return ComboField(ref selection, fields, GUI.skin.box, options);
+//	}
+//	public static bool ComboField(ref int selection, string[] fields, GUIStyle style, params GUILayoutOption[] options)
+//	{
+//		int id = GUIUtility.GetControlID(comboHash, FocusType.Passive);
+//
+//		if (style == null) {
+//			style = GUI.skin.button;
+//		}
+//		GUILayout.Box(fields[selection], options);
+//		Rect boxRect = GUILayoutUtility.GetLastRect();
+//
+//		if (CheckPopUp(id) == PopUpState.OK) {
+//			var result = selection != comboResult;
+//			selection = comboResult;
+//			return result;
+//		}
+//
+//		Event e = Event.current;
+//		if (e.type == EventType.MouseDown && boxRect.Contains(e.mousePosition)) {
+//			var minSize = new Vector2();
+//			foreach (var field in fields) {
+//				var size = style.CalcSize(TempContent(field));
+//				if (size.x > minSize.x)
+//					minSize.x = size.x;
+//				minSize.y += size.y;
+//			}
+//
+//			minSize.x += style.margin.left + style.margin.right;
+//			minSize.y += Mathf.Max(style.margin.top, style.margin.bottom) * (fields.Length + 1);
+//			var comboRect = new Rect(Input.mousePosition.x - 1, Screen.height - Input.mousePosition.y - 1, minSize.x, minSize.y);
+//			comboRect = comboRect.FitToScreen();
+//
+//			int oldSelection = selection;
+//			ShowPopUp(id, () => {
+//				Debug.Log("showPopUp");
+//				GUI.Box(comboRect, "");
+//				var newSelection = GUI.SelectionGrid(comboRect, oldSelection, fields, 1);
+//				if (Event.current.type == EventType.MouseUp) {
+//					if (comboRect.Contains(Event.current.mousePosition) && newSelection != oldSelection) {
+//						comboResult = newSelection;
+//						return PopUpState.OK;
+//					} else {
+//						return PopUpState.Hidden;
+//					}
+//				} else {
+//					return PopUpState.Shown;
+//				}
+//			});
+//		}
+//
+//		return false;
+//	}
+
+	static int comboHash = "Combo".GetHashCode();
 	static int comboControl = 0;
 	static int comboResult = -1;
 	static Rect comboRect;
@@ -316,7 +456,7 @@ public static class GUICommon
 	}
 	public static bool ComboField(ref int selection, string[] fields, GUIStyle style, params GUILayoutOption[] options)
 	{
-		int id = GUIUtility.GetControlID(popupListHash, FocusType.Passive);
+		int id = GUIUtility.GetControlID(comboHash, FocusType.Passive);
 		if (style == null)
 			style = GUI.skin.button;
 
@@ -366,7 +506,7 @@ public static class GUICommon
 
 		return false;
 	}
-	
+
 	public static bool StringFieldWithLabel(string label, ref string text)
 	{
 		GUILayout.BeginHorizontal();

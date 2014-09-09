@@ -627,6 +627,79 @@ public static class Common
 		}
 	}
 
+	public static Color HSVToColor(float h, float s, float v)
+	{
+		var result = Color.white;
+		if (s == 0f) {
+			result.r = v;
+			result.g = v;
+			result.b = v;
+
+		} else if (v == 0f) {
+			result.r = 0f;
+			result.g = 0f;
+			result.b = 0f;
+
+		} else {
+			result.r = 0f;
+			result.g = 0f;
+			result.b = 0f;
+			float num = h * 6f;
+			int num2 = (int)Mathf.Floor(num);
+			float num3 = num - (float)num2;
+			float num4 = v * (1f - s);
+			float num5 = v * (1f - s * num3);
+			float num6 = v * (1f - s * (1f - num3));
+			int num7 = num2;
+			switch (num7 + 1) {
+				case 0:
+					result.r = v;
+					result.g = num4;
+					result.b = num5;
+					break;
+				case 1:
+					result.r = v;
+					result.g = num6;
+					result.b = num4;
+					break;
+				case 2:
+					result.r = num5;
+					result.g = v;
+					result.b = num4;
+					break;
+				case 3:
+					result.r = num4;
+					result.g = v;
+					result.b = num6;
+					break;
+				case 4:
+					result.r = num4;
+					result.g = num5;
+					result.b = v;
+					break;
+				case 5:
+					result.r = num6;
+					result.g = num4;
+					result.b = v;
+					break;
+				case 6:
+					result.r = v;
+					result.g = num4;
+					result.b = num5;
+					break;
+				case 7:
+					result.r = v;
+					result.g = num6;
+					result.b = num4;
+					break;
+			}
+			result.r = Mathf.Clamp(result.r, 0f, 1f);
+			result.g = Mathf.Clamp(result.g, 0f, 1f);
+			result.b = Mathf.Clamp(result.b, 0f, 1f);
+		}
+		return result;
+	}
+
 	#region
 	public static Color[] COLORS = new Color[60] {
 		new Color (0x1f / 255.0f, 0x77 / 255.0f, 0xb4 / 255.0f),

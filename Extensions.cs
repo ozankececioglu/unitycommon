@@ -148,6 +148,12 @@ namespace Extensions
 		{
 			return new Vector2(me.xMax, me.yMin);
 		}
+		public static Rect FitToScreen(this Rect me)
+		{
+			return new Rect(me.xMax > Screen.width ? Screen.width - me.width : me.x,
+				me.yMax > Screen.height ? Screen.height - me.height : me.y,
+				me.width, me.height);
+		}
 	}
 
 	public static class BoundsExtensions
@@ -421,7 +427,7 @@ namespace Extensions
 			return new Ray(near, far - near);
 		}
 	}
-	
+
 	public static class Texture2DExtensions
 	{
 		public static Texture2D GetResized(this Texture2D me, int width, int height)
@@ -438,6 +444,49 @@ namespace Extensions
 				}
 			}
 			return result;
+		}
+	}
+
+	public static class ColorExtensions
+	{
+		public static void ToHSV(this Color me, out float H, out float S, out float V)
+		{
+			if (me.b > me.g && me.b > me.r) {
+				ToHSVHelper(4f, me.b, me.r, me.g, out H, out S, out V);
+			} else {
+				if (me.g > me.r) {
+					ToHSVHelper(2f, me.g, me.b, me.r, out H, out S, out V);
+				} else {
+					ToHSVHelper(0f, me.r, me.g, me.b, out H, out S, out V);
+				}
+			}
+		}
+		private static void ToHSVHelper(float offset, float dominantcolor, float colorone, float colortwo, out float H, out float S, out float V)
+		{
+			V = dominantcolor;
+			if (V != 0f) {
+				float num;
+				if (colorone > colortwo) {
+					num = colortwo;
+				} else {
+					num = colorone;
+				}
+				float num2 = V - num;
+				if (num2 != 0f) {
+					S = num2 / V;
+					H = offset + (colorone - colortwo) / num2;
+				} else {
+					S = 0f;
+					H = offset + (colorone - colortwo);
+				}
+				H /= 6f;
+				if (H < 0f) {
+					H += 1f;
+				}
+			} else {
+				S = 0f;
+				H = 0f;
+			}
 		}
 	}
 }
