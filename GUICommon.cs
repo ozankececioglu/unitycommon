@@ -5,51 +5,31 @@ using System.Collections.Generic;
 using System.Reflection;
 using Extensions;
 
-public static class GUICommon
+public abstract class GUICommon : MonoBehaviour
 {
-	class ActionContainer {
+	class ActionContainer
+	{
 		public Action action;
 	}
-	
-	public static float fieldNameWidth = 150f;
-	public static float fieldDepthWidth = 20f;
-	
-	static GUIContent textImageContent = new GUIContent ();
-	static GUIContent imageContent = new GUIContent ();
-	static GUIContent textContent = new GUIContent ();
+
+	static GUIContent textImageContent = new GUIContent();
+	static GUIContent imageContent = new GUIContent();
+	static GUIContent textContent = new GUIContent();
+
 	static Stack<ActionContainer> postGuiActions = new Stack<ActionContainer>();
-	//
-	private static GUIStyle _fieldNameStyle = null;
-	public static GUIStyle fieldNameStyle {
-		get {
-			if (_fieldNameStyle == null) {
-				_fieldNameStyle = new GUIStyle (GUI.skin.label);
-				_fieldNameStyle.clipping = TextClipping.Clip;
-				_fieldNameStyle.wordWrap = false;
-			}
-			return _fieldNameStyle;
-		}
-	}
-	
-	static GUICommon()
+	public static void PushPostGui()
 	{
-		colorBoxStyle = new GUIStyle(GUI.skin.box);
-		colorBoxTexture = new Texture2D(1, 1);
-		colorPickerTexture = new Texture2D(256, 256);
-		colorHueStyle = new GUIStyle(GUI.skin.box);
-		colorHueStyle.normal.background = Resources.Load("colorHueTexture") as Texture2D;
-	}
-	
-	public static void PushPostGui() {
 		postGuiActions.Push(new ActionContainer());
 	}
-	public static void PopPostGui() {
+	public static void PopPostGui()
+	{
 		var actionContainer = postGuiActions.Pop();
 		if (actionContainer.action != null) {
 			actionContainer.action();
 		}
 	}
-	public static void AddPostGui(Action action) {
+	public static void AddPostGui(Action action)
+	{
 		var actionContainer = postGuiActions.Peek();
 		actionContainer.action += action;
 	}
@@ -93,99 +73,97 @@ public static class GUICommon
 			}
 		}
 	}
-	
-	public static GUIContent TempContent (string text)
+
+	public static GUIContent TempContent(string text)
 	{
 		textContent.text = text;
 		return textContent;
 	}
-	public static GUIContent TempContent (Texture image)
+	public static GUIContent TempContent(Texture image)
 	{
 		imageContent.image = image;
 		return imageContent;
 	}
-	public static GUIContent TempContent (string text, Texture image)
+	public static GUIContent TempContent(string text, Texture image)
 	{
 		textImageContent.text = text;
 		textImageContent.image = image;
 		return textImageContent;
 	}
-	public static GUIContent [] TempContent (string [] texts)
+	public static GUIContent[] TempContent(string[] texts)
 	{
 		var result = new GUIContent[texts.Length];
 		for (int itext = 0; itext < texts.Length; itext++) {
-			result [itext] = new GUIContent (texts [itext]);
+			result[itext] = new GUIContent(texts[itext]);
 		}
 		return result;
 	}
-	
-	public static void ClearCache ()
+
+	public static void ClearCache()
 	{
 		popUpControl = 0;
 		textCacheControl = 0;
-		comboControl = 0;
+//		comboControl = 0;
 	}
 
-	private static Texture2D colorBoxTexture;
-	private static GUIStyle colorBoxStyle;
-	public static void ColorBox(Color color, params GUILayoutOption[] options)
+	public static float fieldNameWidth = 150f;
+	public static float fieldDepthWidth = 20f;
+	private static GUIStyle _fieldNameStyle = null;
+	public static GUIStyle fieldNameStyle
 	{
-		colorBoxTexture.SetPixel(0, 0, color);
-		colorBoxTexture.Apply();
-		colorBoxStyle.normal.background = colorBoxTexture;
-		GUILayout.Box(GUIContent.none, colorBoxStyle, options);
+		get
+		{
+			if (_fieldNameStyle == null) {
+				_fieldNameStyle = new GUIStyle(GUI.skin.label);
+				_fieldNameStyle.clipping = TextClipping.Clip;
+				_fieldNameStyle.wordWrap = false;
+			}
+			return _fieldNameStyle;
+		}
 	}
-	public static bool ColorButton(Color color, params GUILayoutOption[] options)
-	{
-		colorBoxTexture.SetPixel(0, 0, color);
-		colorBoxTexture.Apply();
-		colorBoxStyle.normal.background = colorBoxTexture;
-		return GUILayout.Button(GUIContent.none, colorBoxStyle, options);
-	}
-	
+
 	static int textCacheControl = 0;
 	static string textCache = null;
-	delegate string StringerDel (object obj);
-	delegate bool ParserDel (string text, out object value);
-	
-	static bool FormattedField (StringerDel stringer, ParserDel parser, ref object value, GUIStyle style,
+	delegate string StringerDel(object obj);
+	delegate bool ParserDel(string text, out object value);
+	static bool FormattedField(StringerDel stringer, ParserDel parser, ref object value, GUIStyle style,
 		params GUILayoutOption[] options)
 	{
-		int controlId = GUIUtility.GetControlID (FocusType.Keyboard);
+		int controlId = GUIUtility.GetControlID(FocusType.Keyboard);
 		if (controlId == textCacheControl && controlId != GUIUtility.keyboardControl) {
 			textCacheControl = 0;
 		}
-		var inputStr = (controlId == textCacheControl && controlId == GUIUtility.keyboardControl) ? textCache : stringer (value);
-		var rect = GUILayoutUtility.GetRect (TempContent (controlId == GUIUtility.keyboardControl ?
+		var inputStr = (controlId == textCacheControl && controlId == GUIUtility.keyboardControl) ? textCache : stringer(value);
+		var rect = GUILayoutUtility.GetRect(TempContent(controlId == GUIUtility.keyboardControl ?
 			inputStr + Input.compositionString : inputStr), style);
-		var content = TempContent (inputStr);
+		var content = TempContent(inputStr);
 
 		bool guiChanged = GUI.changed;
 		GUI.changed = false;
-		UnityInternals.GUI_DoTextField (rect, controlId, content, false, -1, style);
+		UnityInternals.GUI_DoTextField(rect, controlId, content, false, -1, style);
 		bool tguiChanged = GUI.changed;
 		GUI.changed = guiChanged;
-		
+
 		if (tguiChanged) {
 			textCache = content.text;
 			textCacheControl = controlId;
 			object tvalue;
-			if (parser (content.text, out tvalue)) {
+			if (parser(content.text, out tvalue)) {
 				value = tvalue;
 				return true;
 			}
 		}
-		
+
 		return false;
 	}
 
-	public static void FieldLabel(string name, int depth) {
+	public static void FieldLabel(string name, int depth)
+	{
 		float pixelDepth = depth * GUICommon.fieldDepthWidth;
 		GUILayout.Space(pixelDepth);
 		GUILayout.Label(name, GUICommon.fieldNameStyle, GUILayout.Width(GUICommon.fieldNameWidth - pixelDepth));
 	}
-	
-	public static float NumberLabel(Rect rect, string name) 
+	public static float NumberLabel(Rect rect, string name)
 	{
 		int controlId = GUIUtility.GetControlID(FocusType.Native);
 		GUI.Label(rect, name, fieldNameStyle);
@@ -200,10 +178,10 @@ public static class GUICommon
 				return Input.GetKey(KeyCode.LeftShift) ? 5f * Event.current.delta.x : Event.current.delta.x;
 			}
 		}
-		
+
 		return 0f;
 	}
-	public static float NumberLabel(string name, params GUILayoutOption [] options)
+	public static float NumberLabel(string name, params GUILayoutOption[] options)
 	{
 		int controlId = GUIUtility.GetControlID(FocusType.Native);
 		GUILayout.Label(name, fieldNameStyle, options);
@@ -219,7 +197,7 @@ public static class GUICommon
 				return Input.GetAxis("Mouse X");
 			}
 		}
-		
+
 		return 0f;
 	}
 	public static float NumberLabel(string name, int depth)
@@ -228,63 +206,63 @@ public static class GUICommon
 		GUILayout.Space(pixelDepth);
 		return NumberLabel(name, GUILayout.Width(GUICommon.fieldNameWidth - pixelDepth));
 	}
-	
-	public static bool StringField (ref string text, params GUILayoutOption[] options)
+
+	public static bool StringField(ref string text, params GUILayoutOption[] options)
 	{
 		bool guiChanged = GUI.changed;
 		GUI.changed = false;
-		text = GUILayout.TextField (text, options);
+		text = GUILayout.TextField(text, options);
 		bool tguiChanged = GUI.changed;
 		GUI.changed = guiChanged;
-		
+
 		return tguiChanged;
 	}
-	public static bool IntField (ref int value, params GUILayoutOption [] options)
+	public static bool IntField(ref int value, params GUILayoutOption[] options)
 	{
 		var style = GUI.skin.textField;
 		object oval = value;
-		bool tresult = FormattedField (x => x.ToString (), delegate (string str, out object tvalue) {
+		bool tresult = FormattedField(x => x.ToString(), delegate(string str, out object tvalue) {
 			int val;
-			bool result = Int32.TryParse (str, out val);
+			bool result = Int32.TryParse(str, out val);
 			tvalue = val;
 			return result;
 		}, ref oval, style, options);
 		value = (int)oval;
 		return tresult;
 	}
-	public static bool FloatField (ref float value, params GUILayoutOption [] options)
+	public static bool FloatField(ref float value, params GUILayoutOption[] options)
 	{
 		var style = GUI.skin.textField;
 		object oval = value;
-		bool tresult = FormattedField (x => ((float)x).ToString ("g7"), delegate (string str, out object tvalue) {
+		bool tresult = FormattedField(x => ((float)x).ToString("g7"), delegate(string str, out object tvalue) {
 			float val;
-			bool result = Single.TryParse (str, out val);
+			bool result = Single.TryParse(str, out val);
 			tvalue = val;
 			return result;
 		}, ref oval, style, options);
 		value = (float)oval;
 		return tresult;
 	}
-	public static bool DoubleField (ref double value, params GUILayoutOption [] options)
+	public static bool DoubleField(ref double value, params GUILayoutOption[] options)
 	{
 		var style = GUI.skin.textField;
 		object oval = value;
-		bool tresult = FormattedField (x => ((double)x).ToString ("g7"), delegate (string str, out object tvalue) {
+		bool tresult = FormattedField(x => ((double)x).ToString("g7"), delegate(string str, out object tvalue) {
 			double val;
-			bool result = Double.TryParse (str, out val);
+			bool result = Double.TryParse(str, out val);
 			tvalue = val;
 			return result;
 		}, ref oval, style, options);
 		value = (double)oval;
 		return tresult;
 	}
-	public static bool Vector3Field (ref Vector3 value)
+	public static bool Vector3Field(ref Vector3 value)
 	{
-		Rect rect = GUILayoutUtility.GetRect (TempContent ("Vector3Field"), GUI.skin.textField, GUILayout.ExpandWidth(true));
+		Rect rect = GUILayoutUtility.GetRect(TempContent("Vector3Field"), GUI.skin.textField, GUILayout.ExpandWidth(true));
 		var widthOption = GUILayout.Width(rect.width / 3);
 		float delta;
 		bool changed = false;
-		
+
 		GUILayout.BeginHorizontal();
 		if (Event.current.type == EventType.Layout) {
 			GUILayout.BeginHorizontal();
@@ -296,9 +274,9 @@ public static class GUICommon
 			value.x += delta;
 			changed = true;
 		}
-		changed |= GUICommon.FloatField (ref value.x, GUILayout.ExpandWidth(true));
+		changed |= GUICommon.FloatField(ref value.x, GUILayout.ExpandWidth(true));
 		GUILayout.EndHorizontal();
-		
+
 		if (Event.current.type == EventType.Layout) {
 			GUILayout.BeginHorizontal();
 		} else {
@@ -309,9 +287,9 @@ public static class GUICommon
 			value.y += delta;
 			changed = true;
 		}
-		changed |= GUICommon.FloatField (ref value.y, GUILayout.ExpandWidth(true));
+		changed |= GUICommon.FloatField(ref value.y, GUILayout.ExpandWidth(true));
 		GUILayout.EndHorizontal();
-		
+
 		if (Event.current.type == EventType.Layout) {
 			GUILayout.BeginHorizontal();
 		} else {
@@ -322,46 +300,44 @@ public static class GUICommon
 			value.z += delta;
 			changed = true;
 		}
-		changed |= GUICommon.FloatField (ref value.z, GUILayout.ExpandWidth(true));
+		changed |= GUICommon.FloatField(ref value.z, GUILayout.ExpandWidth(true));
 		GUILayout.EndHorizontal();
 		GUILayout.EndHorizontal();
-		
+
 		return changed;
 	}
-	public static bool BoundsField (ref Bounds value)
+	public static bool BoundsField(ref Bounds value)
 	{
 		var changed = false;
-		GUILayout.BeginVertical ();
-		GUILayout.BeginHorizontal ();
-		GUILayout.Label ("Center", GUILayout.Width (GUICommon.fieldNameWidth));
+		GUILayout.BeginVertical();
+		GUILayout.BeginHorizontal();
+		GUILayout.Label("Center", GUILayout.Width(GUICommon.fieldNameWidth));
 		Vector3 center = value.center;
-		if (Vector3Field (ref center)) {
+		if (Vector3Field(ref center)) {
 			value.center = center;
 			changed = true;
 		}
-		GUILayout.EndHorizontal ();
-		
-		GUILayout.BeginHorizontal ();
-		GUILayout.Label ("Extents", GUILayout.Width (GUICommon.fieldNameWidth));
+		GUILayout.EndHorizontal();
+
+		GUILayout.BeginHorizontal();
+		GUILayout.Label("Extents", GUILayout.Width(GUICommon.fieldNameWidth));
 		Vector3 extents = value.extents;
-		if (Vector3Field (ref extents)) {
+		if (Vector3Field(ref extents)) {
 			value.extents = extents;
 			changed = true;
 		}
-		GUILayout.EndHorizontal ();
-		GUILayout.EndVertical ();
-		
+		GUILayout.EndHorizontal();
+		GUILayout.EndVertical();
+
 		return changed;
 	}
 
-	static int colorHash = "Color".GetHashCode();
-	static int colorControl = 0;
-	static Color colorResult;
-	static bool colorHasResult;
-	static Rect colorRect;
-
-	static Texture2D colorPickerTexture;
-	static void PaintColorPicker(float hue)
+	static int colorFieldHash = "Color".GetHashCode();
+	static int colorFieldControl = 0;
+	static Color colorFieldResult;
+	static bool hasColorFieldResult;
+	static Rect colorFieldRect;
+	static void PaintColorPickerTexture(float hue)
 	{
 		var width = colorPickerTexture.width;
 		var height = colorPickerTexture.height;
@@ -371,17 +347,15 @@ public static class GUICommon
 			}
 		}
 	}
-
-	static GUIStyle colorHueStyle;
 	public static bool ColorField(ref Color color)
 	{
-		int id = GUIUtility.GetControlID(colorHash, FocusType.Passive);
-		
+		int id = GUIUtility.GetControlID(colorFieldHash, FocusType.Passive);
+
 		if (GUICommon.ColorButton(color, GUILayout.Width(45f), GUILayout.Height(12f))) {
-			colorControl = id;
+			colorFieldControl = id;
 		}
 
-		if (colorHasResult && colorControl == id) {
+		if (hasColorFieldResult && colorFieldControl == id) {
 
 		}
 
@@ -419,7 +393,7 @@ public static class GUICommon
 //					minSize.x = size.x;
 //				minSize.y += size.y;
 //			}
-//
+//			
 //			minSize.x += style.margin.left + style.margin.right;
 //			minSize.y += Mathf.Max(style.margin.top, style.margin.bottom) * (fields.Length + 1);
 //			var comboRect = new Rect(Input.mousePosition.x - 1, Screen.height - Input.mousePosition.y - 1, minSize.x, minSize.y);
@@ -507,31 +481,70 @@ public static class GUICommon
 		return false;
 	}
 
+	public static Texture2D colorBoxTexture = new Texture2D(1, 1);
+	public static Texture2D colorPickerTexture = new Texture2D(256, 256);
+	private static GUIStyle _colorBoxStyle;
+	public static GUIStyle colorBoxStyle
+	{
+		get
+		{
+			if (_colorBoxStyle == null) {
+				_colorBoxStyle = new GUIStyle(GUI.skin.box);
+				_colorBoxStyle.normal.background = colorBoxTexture;
+			}
+			return _colorBoxStyle;
+		}
+	}
+	private static GUIStyle _colorHueStyle;
+	public static GUIStyle colorHueStyle
+	{
+		get
+		{
+			if (_colorHueStyle == null) {
+				_colorHueStyle = new GUIStyle(GUI.skin.box);
+				_colorHueStyle.normal.background = Resources.Load("colorHueTexture") as Texture2D;
+			}
+			return _colorHueStyle;
+		}
+	}
+	public static void ColorBox(Color color, params GUILayoutOption[] options)
+	{
+		colorBoxTexture.SetPixel(0, 0, color);
+		colorBoxTexture.Apply();
+		GUILayout.Box(GUIContent.none, colorBoxStyle, options);
+	}
+	public static bool ColorButton(Color color, params GUILayoutOption[] options)
+	{
+		colorBoxTexture.SetPixel(0, 0, color);
+		colorBoxTexture.Apply();
+		return GUILayout.Button(GUIContent.none, colorBoxStyle, options);
+	}
+
 	public static bool StringFieldWithLabel(string label, ref string text)
 	{
 		GUILayout.BeginHorizontal();
 		GUILayout.Label(label, fieldNameStyle, GUILayout.Width(fieldNameWidth));
 		bool guiChanged = GUI.changed;
 		GUI.changed = false;
-		text = GUILayout.TextField (text);
+		text = GUILayout.TextField(text);
 		bool tguiChanged = GUI.changed;
 		GUI.changed = guiChanged || tguiChanged;
 		GUILayout.EndHorizontal();
-		
+
 		return tguiChanged;
 	}
-	public static bool BoolFieldWithLabel(string label, ref bool value) 
+	public static bool BoolFieldWithLabel(string label, ref bool value)
 	{
 		GUILayout.BeginHorizontal();
 		GUILayout.Label(label, fieldNameStyle, GUILayout.Width(fieldNameWidth));
 		var tvalue = value;
-		value = GUILayout.Toggle (tvalue, "");
+		value = GUILayout.Toggle(tvalue, "");
 		bool result = tvalue != value;
 		GUILayout.EndHorizontal();
-		
+
 		return result;
 	}
-	public static bool IntFieldWithLabel(string label, ref int value) 
+	public static bool IntFieldWithLabel(string label, ref int value)
 	{
 		GUILayout.BeginHorizontal();
 		float delta = NumberLabel(label, GUILayout.Width(fieldNameWidth));
@@ -539,12 +552,12 @@ public static class GUICommon
 		if (result) {
 			value += (int)delta;
 		}
-		result |= GUICommon.IntField (ref value);
+		result |= GUICommon.IntField(ref value);
 		GUILayout.EndHorizontal();
-		
+
 		return result;
 	}
-	public static bool FloatFieldWithLabel(string label, ref float value) 
+	public static bool FloatFieldWithLabel(string label, ref float value)
 	{
 		GUILayout.BeginHorizontal();
 		float delta = NumberLabel(label, GUILayout.Width(fieldNameWidth));
@@ -552,9 +565,9 @@ public static class GUICommon
 		if (result) {
 			value += delta * 0.1f;
 		}
-		result |= GUICommon.FloatField (ref value);
+		result |= GUICommon.FloatField(ref value);
 		GUILayout.EndHorizontal();
-		
+
 		return result;
 	}
 	public static bool FloatSliderWithLabel(string label, ref float value, float min, float max)
@@ -616,4 +629,17 @@ public static class GUICommon
 
 		return result;
 	}
+
+	public Rect guiArea = new Rect(0f, 0f, Screen.width, Screen.height);
+	void OnGUI()
+	{
+//		GUICommon.PushPostGui();
+		GUILayout.BeginArea(guiArea);
+		GUILayout.BeginVertical(GUI.skin.box);
+		OnGUICommon();
+		GUILayout.EndVertical();
+		GUILayout.EndArea();
+//		GUICommon.PopPostGui();
+	}
+	protected abstract void OnGUICommon();
 }

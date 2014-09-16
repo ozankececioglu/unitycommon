@@ -47,26 +47,6 @@ public class PropertyDrawer
 		InstantiateNullFields
 	}
 
-	public struct DrawerArgs
-	{
-		public string name;
-		public Description description;
-		public object value;
-		public int depth;
-		// TODO nullpolicy will be fed from description & drawer
-		public NullPolicy nullPolicy;
-
-		private Type _type;
-		public Type type
-		{
-			get { return _type; }
-			set { _type = value; _drawer = PropertyDrawer.GetDrawer(_type); }
-		}
-
-		private PropertyDrawer _drawer;
-		public PropertyDrawer drawer { get { return _drawer; } }
-	}
-
 	public class Description : Attribute
 	{
 		public string title;
@@ -125,6 +105,26 @@ public class PropertyDrawer
 		{
 			type = ttype;
 		}
+	}
+
+	public struct DrawerArgs
+	{
+		public string name;
+		public Description description;
+		public object value;
+		public int depth;
+		// TODO nullPolicy will be removed, will be determined from description and drawer
+		public NullPolicy nullPolicy;
+
+		private Type _type;
+		public Type type
+		{
+			get { return _type; }
+			set { _type = value; _drawer = PropertyDrawer.GetDrawer(_type); }
+		}
+
+		private PropertyDrawer _drawer;
+		public PropertyDrawer drawer { get { return _drawer; } }
 	}
 
 	public static string translationSize = "Size";
@@ -316,7 +316,7 @@ internal class EnumDrawer : PropertyDrawer
 
 internal class ListDrawer : PropertyDrawer
 {
-	private static IList listToBeMarkedToDelete = null;
+	private static IList listInDeleteMode = null;
 	public const float smallButtonWidth = 30f;
 
 	public override bool OnTitleAndValue(ref DrawerArgs args)
@@ -326,7 +326,7 @@ internal class ListDrawer : PropertyDrawer
 		var targs = new DrawerArgs();
 		targs.type = args.type.GetGenericArguments()[0];
 		targs.depth = args.depth + 1;
-		// TODO
+		// TODO remove nullpolicy from args
 		targs.nullPolicy = args.nullPolicy;
 
 		var drawer = targs.drawer;
@@ -381,14 +381,14 @@ internal class ListDrawer : PropertyDrawer
 			}
 		}
 
-		var deleteEnabled = listToBeMarkedToDelete == list;
+		var deleteEnabled = listInDeleteMode == list;
 		if (deleteEnabled) {
 			if (GUILayout.Button("O", GUILayout.Width(smallButtonWidth))) {
-				listToBeMarkedToDelete = null;
+				listInDeleteMode = null;
 			}
 		} else if (list.Count > 0) {
 			if (GUILayout.Button("-", GUILayout.Width(smallButtonWidth))) {
-				listToBeMarkedToDelete = list;
+				listInDeleteMode = list;
 			}
 		}
 
