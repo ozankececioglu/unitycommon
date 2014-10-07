@@ -605,7 +605,9 @@ public static class Common
 		processInfo.UseShellExecute = false;
 		processInfo.RedirectStandardError = true;
 		processInfo.RedirectStandardOutput = true;
-		processInfo.StandardOutputEncoding = new System.Text.UnicodeEncoding();
+		var encoding = new System.Text.UnicodeEncoding();
+		processInfo.StandardOutputEncoding = encoding;
+		processInfo.StandardErrorEncoding = encoding;
 
 		outputStream = null;
 		errorStream = null;
