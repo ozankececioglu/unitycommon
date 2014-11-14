@@ -638,11 +638,11 @@ internal class ObjectDrawer : PropertyDrawer
 			}
 		}
 
-		var accessors = ObjectDrawer.GetDescriptions(args.type);
 		var targs = new PropertyDrawer.DrawerArgs();
 		targs.depth = args.depth + 1;
 		targs.nullPolicy = args.nullPolicy;
 
+		var accessors = ObjectDrawer.GetDescriptions(args.type);
 		if (accessors.Count == 1) {
 			var accessor = accessors[0];
 			targs.type = accessor.GetAccessorType();

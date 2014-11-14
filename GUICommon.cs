@@ -633,13 +633,13 @@ public abstract class GUICommon : MonoBehaviour
 	public Rect guiArea = new Rect(0f, 0f, Screen.width, Screen.height);
 	void OnGUI()
 	{
-//		GUICommon.PushPostGui();
+		GUICommon.PushPostGui();
 		GUILayout.BeginArea(guiArea);
 		GUILayout.BeginVertical(GUI.skin.box);
 		OnGUICommon();
 		GUILayout.EndVertical();
 		GUILayout.EndArea();
-//		GUICommon.PopPostGui();
+		GUICommon.PopPostGui();
 	}
 	protected abstract void OnGUICommon();
 }
