@@ -25,6 +25,20 @@ public struct Tuple2<T1, T2>
 	}
 }
 
+public struct Tuple3<T1, T2, T3>
+{
+	public T1 t1;
+	public T2 t2;
+	public T3 t3;
+
+	public Tuple3(T1 a1, T2 a2, T3 a3)
+	{
+		t1 = a1;
+		t2 = a2;
+		t3 = a3;
+	}
+}
+
 public struct ReadOnlyList<T> : IEnumerable<T>
 {
 	private IList<T> list;
@@ -401,11 +415,6 @@ public static class Common
 	public static void LogError(string message, params object[] objects)
 	{
 		UnityEngine.Debug.LogError(String.Format(message, objects));
-	}
-
-	public static void DebugObject(object obj)
-	{
-		Debugger.Log(PrintObject(obj, 0, true));
 	}
 
 	public static string PrintObject(object obj, bool printTypes = true)

@@ -54,13 +54,11 @@ public class SafeSerializer : ISurrogateSelector, ISerializationSurrogate
 
 	static Dictionary<Type, SerializableRep> types = new Dictionary<Type, SerializableRep>();
 	static SafeSerializer instance;
-	static StreamingContext context;
 	static BinaryFormatter formatter;
 
 	static SafeSerializer()
 	{
 		instance = new SafeSerializer();
-		context = new StreamingContext(StreamingContextStates.All);
 		formatter = new BinaryFormatter();
 		formatter.SurrogateSelector = instance;
 	}

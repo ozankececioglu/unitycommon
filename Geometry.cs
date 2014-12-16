@@ -89,9 +89,9 @@ public struct RotatableBounds
         yield return new Plane(-maxisX, center + taxisX);
         yield return new Plane(maxisX, center - taxisX);
         yield return new Plane(-maxisY, center + taxisY);
-        yield return new Plane(maxisY, center - maxisY);
-        yield return new Plane(-maxisZ, center + maxisZ);
-        yield return new Plane(maxisZ, center - maxisZ);
+        yield return new Plane(maxisY, center - taxisY);
+        yield return new Plane(-maxisZ, center + taxisZ);
+        yield return new Plane(maxisZ, center - taxisZ);
     }
     public Bounds ToBounds()
     {
