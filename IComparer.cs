@@ -30,7 +30,7 @@ public class ComparerFactory<T, K>
 			defaultComparer = new ComparerFactory<T, K>.DefaultComparer ();
 		}
 	}
-	
+
 	private class ForwardComparer<T1, K1> : IComparer<T1, K1> where T1 : IComparable<K1>
 	{
 		public int Compare (T1 t, K1 k)
@@ -38,7 +38,7 @@ public class ComparerFactory<T, K>
 			return t.CompareTo (k);
 		}
 	}
-		
+
 	private class InverseComparer<T1, K1> : IComparer<T1, K1> where K1 : IComparable<T1>
 	{
 		public int Compare (T1 t, K1 k)
@@ -47,7 +47,7 @@ public class ComparerFactory<T, K>
 			return result < 0 ? 1 : (result > 0 ? -1 : 0);
 		}
 	}
-		
+
 	private class DefaultComparer : IComparer<T, K>
 	{
 		public int Compare (T x, K y)

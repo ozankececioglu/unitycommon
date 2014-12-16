@@ -10,15 +10,10 @@ using System.Collections;
 using System.Collections.Generic;
 using Extensions;
 
-namespace AI
+public class QualitySettingsManager : MonoBehaviour 
 {
-	[System.Serializable]
-	public class Node
+	void Awake() 
 	{
-		public Graph graph;
-		public object meta;
-		public Vector3 position;
-		public List<Line> incomings;
-		public List<Line> outgoings;
+		QualitySettings.SetQualityLevel(5, true);
 	}
 }

@@ -1,5 +1,7 @@
-using UnityEngine;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
+using UnityEngine;
 using System.IO;
 using System.Xml;
 using System.Text;
@@ -8,13 +10,39 @@ using System.Collections.Generic;
 using System;
 using Extensions;
 
-#if UNITY_EDITOR
 public class EditorCommon
 {
+#if UNITY_EDITOR
+	public static void ApplyChangeToPrefab(GameObject go) {
+		var selection = Selection.objects;
+		Selection.activeObject = go;
+		EditorApplication.ExecuteMenuItem("GameObject/Apply Changes To Prefab");
+		Selection.objects = selection;
+	}
+	public static bool IsPrefab(UnityEngine.Object obj)
+	{
+		return PrefabUtility.GetPrefabParent(obj) == null && PrefabUtility.GetPrefabObject(obj) != null;
+	}
+	public static bool IsGameObject(UnityEngine.Object obj)
+	{
+		return obj is GameObject ? !IsPrefab(obj) : false;
+	}
+
+	[MenuItem("SimBT/Apply All Prefabs", priority = 500)]
+	public static void ApplyChangesToPrefabs()
+	{
+		var gos = Selection.gameObjects;
+		foreach (var go in gos) {
+			Selection.activeGameObject = go;
+			EditorApplication.ExecuteMenuItem("GameObject/Apply Changes To Prefab");
+		}
+		Selection.objects = gos;
+	}
+
 	[MenuItem("SimBT/Build Bundles From Selection", priority = 500)]
 	public static void BuildBundlesFromSelection ()
 	{
-		Common.ApplyChangesToPrefabs ();
+        ApplyChangesToPrefabs();
 		
 		if (Selection.activeObject == null) {
 			Debug.LogError ("Select an object, no objects are selected");
@@ -31,7 +59,8 @@ public class EditorCommon
 		
 		foreach (var obj in Selection.objects) {
 			UnityEngine.Object content;
-			if (Common.IsGameObject (obj)) {
+            if (EditorCommon.IsGameObject(obj))
+            {
 				GameObject go = obj as GameObject;
 				go.SendMessage ("PreBuildBundle", null, SendMessageOptions.DontRequireReceiver);
 				string prefabName = obj.name + ".prefab";
@@ -57,7 +86,8 @@ public class EditorCommon
 	static void ListBundleContent ()
 	{
 		string path;
-		if (Selection.activeObject && !Common.IsGameObject (Selection.activeObject)) {
+        if (Selection.activeObject && !IsGameObject(Selection.activeObject))
+        {
 			path = AssetDatabase.GetAssetOrScenePath (Selection.activeObject);
 		} else {
 			path = EditorUtility.OpenFilePanel ("Load Resource", "Assets/StreamingAssets/Bundles", "unity3d");
@@ -167,50 +197,5 @@ public class EditorCommon
 //			UnityEngine.Object.DestroyImmediate (anim);
 //		}
 //	}
-
-//	[MenuItem("SimBT/Verify paths", false, 0)]
-//	static void VerifyPaths ()
-//	{
-//		GameObject aigo = GameObject.Find ("/AI");
-//		SimAIPath [] paths = aigo.GetComponentsInChildren<SimAIPath> ();
-//		
-//		foreach (SimAIPath path in paths) {
-//			if (!path.Verify ()) {
-//				Selection.activeObject = path.gameObject;
-//				SceneView.currentDrawingSceneView.FrameSelected();
-//				return;
-//			}
-//		}
-//		
-//		Debug.Log("All paths are verified and ok");
-//	}
-//	
-//	[MenuItem("SimBT/Select AI Path %#t", false, 0)]
-//	static void SelectAIPath ()
-//	{
-//		GameObject aigo = GameObject.Find ("/AI");
-//		if (aigo) {
-//			SimAIPath path = aigo.GetComponentInChildren<SimAIPath> ();
-//			Selection.activeObject = path.gameObject;
-//		}
-//	}
-//	
-//	[MenuItem("SimBT/Select Agent Root %#r", false, 0)]
-//	static void SelectAgentRoot ()
-//	{
-//		if (Selection.activeGameObject != null) {
-//			Transform transform = Selection.activeGameObject.transform;
-//			while (transform != null) {
-//				if (transform.GetComponent<AIAgent> () != null) {
-//					Selection.activeObject = transform.gameObject;
-//					return;
-//				}
-//
-//				transform = transform.parent;
-//			}
-//			Debug.Log ("No AIAgent found");
-//		}
-//	}
-	
+#endif	
 }
-#endif

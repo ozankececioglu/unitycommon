@@ -13,45 +13,78 @@ using System.Linq;
 using System.Diagnostics;
 using Extensions;
 
-struct CheckTimer
+public struct Tuple2<T1, T2>
+{
+	public T1 t1;
+	public T2 t2;
+
+	public Tuple2(T1 a1, T2 a2)
+	{
+		t1 = a1;
+		t2 = a2;
+	}
+}
+
+public struct ReadOnlyList<T> : IEnumerable<T>
+{
+	private IList<T> list;
+
+	public ReadOnlyList(IList<T> alist)
+	{
+		list = alist;
+	}
+
+	public int Count { get { return list.Count; } }
+	public T this[int index] { get { return list[index]; } }
+	IEnumerator<T> IEnumerable<T>.GetEnumerator() { return list.GetEnumerator(); }
+	IEnumerator IEnumerable.GetEnumerator() { return list.GetEnumerator(); }
+}
+
+public struct CheckTimer
 {
 	float nextCheck;
 	float interval;
 
-	public CheckTimer(float ainterval)
+	// Negative interval means oneshot timer, 0 means timer is disabled. Once the timer interval is set, clock is reset
+	public CheckTimer(float ainterval = 0f)
 	{
 		interval = ainterval;
-		nextCheck = UnityEngine.Time.time + interval;
+		nextCheck = interval.IsZero() ? float.MaxValue : UnityEngine.Time.time + Mathf.Abs(interval);
 	}
 
-	public void SetInterval(float ainterval)
+	// Negative interval means oneshot timer, 0 means timer is disabled. Once timer interval is set, clock is reset
+	public float Interval
 	{
-		interval = ainterval;
-		nextCheck = UnityEngine.Time.time + interval;
+		get { return interval; }
+		set
+		{
+			interval = value;
+			nextCheck = interval.IsZero() ? float.MaxValue : UnityEngine.Time.time + Mathf.Abs(interval);
+		}
 	}
 
+	// timer should be checked in each update
 	public bool Check()
 	{
-		if (UnityEngine.Time.time > nextCheck) {
-			nextCheck = UnityEngine.Time.time + interval;
+		if (UnityEngine.Time.time > nextCheck && !interval.IsZero()) {
+			nextCheck = interval < 0f ? float.MaxValue : UnityEngine.Time.time + interval;
 			return true;
 		}
 		return false;
 	}
 }
 
-public class UnitySingleton<T> : MonoBehaviour where T : MonoBehaviour
+public class SingletonUnity<T> : MonoBehaviour where T : MonoBehaviour
 {
-	private static T instance = null;
+	private static T instance;
 	public static T Instance
 	{
 		get
 		{
 			if (instance == null) {
-				var className = typeof(T).Name;
-				var go = GameObject.Find("/" + className);
+				var go = GameObject.Find("/Singleton");
 				if (go == null) {
-					go = new GameObject(className);
+					go = new GameObject("Singleton");
 				}
 
 				instance = go.GetComponent<T>();
@@ -93,84 +126,6 @@ public static class Common
 		return obj is GameObject ? !IsPrefab(obj) : false;
 	}
 #endif
-
-	static Common()
-	{
-#if !UNITY_EDITOR
-		File.AppendAllText("log.txt", "\n=============================" + DateTime.Now.ToString() + "=============================\n");
-#endif
-	}
-
-	public static void Log(object obj, bool forceToFile = false)
-	{
-		string log = PrintObject(obj, 0);
-
-		UnityEngine.Debug.Log(log);
-		if (Application.isEditor || forceToFile) {
-			File.AppendAllText("log.txt", "info: " + log.Replace("\n", "\n\t") + "\n");
-		}
-	}
-	public static void LogWarning(object obj, bool forceToFile = false)
-	{
-		string log = PrintObject(obj, 0);
-
-		UnityEngine.Debug.LogWarning(log);
-		if (Application.isEditor || forceToFile) {
-			File.AppendAllText("log.txt", "*warning*: " + log.Replace("\n", "\n\t") + "\n");
-		}
-	}
-	public static void LogError(object obj, bool forceToFile = false)
-	{
-		string log = PrintObject(obj, 0);
-
-		UnityEngine.Debug.LogError(log);
-		if (Application.isEditor || forceToFile) {
-			File.AppendAllText("log.txt", "**error**: " + log.Replace("\n", "\n\t") + "\n");
-		}
-	}
-	public static string PrintObject(object obj)
-	{
-		return PrintObject(obj, 0);
-	}
-	private static string PrintObject(object obj, int depth)
-	{
-		if (obj == null) {
-			return "'NULL'";
-		} else {
-			var objType = obj.GetType();
-			var bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
-
-			if (objType.GetMethod("ToString", bindingFlags, null, Type.EmptyTypes, new ParameterModifier[0]) != null) {
-				return obj.ToString();
-			} else {
-				var result = "";
-				var tabs = "".PadRight(depth, '\t');
-
-				if (obj is IEnumerable) {
-					result += "[\n";
-					var enumer = obj as IEnumerable;
-					int ielement = 0;
-					foreach (var element in enumer) {
-						result += tabs + '\t' + ielement + ": " + PrintObject(element, depth + 1) + "\n";
-						ielement++;
-					}
-
-					result += tabs + "]";
-				} else {
-					var fields = objType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-					result += "{\n";
-
-					foreach (var field in fields) {
-						result += tabs + '\t' + field.Name + ": " + PrintObject(field.GetValue(obj), depth + 1) + "\n";
-					}
-
-					result += tabs + "}";
-				}
-
-				return result;
-			}
-		}
-	}
 
 	static Texture2D dummyTexture = null;
 	public static Texture2D DummyTexture()
@@ -303,6 +258,22 @@ public static class Common
 		UnityEngine.Debug.DrawLine(position + new Vector3(xmax, ymin, zmax), position + new Vector3(xmax, ymax, zmax), color);
 		UnityEngine.Debug.DrawLine(position + new Vector3(xmax, ymin, zmax), position + new Vector3(xmin, ymin, zmax), color);
 	}
+	//	private const int segmentCount = 8;
+	//	public static void DrawSphere(Vector3 center, float radius) 
+	//	{
+	//		DrawSphere(center, radius, Color.white);
+	//	}
+	//	public static void DrawSphere(Vector3 center, float radius, Color color)
+	//	{
+	//		Vector3 previous = center + Vector3.one * radius;
+	//		for (int xsegment = 0; xsegment < segmentCount; xsegment++) {
+	//			var sin = Mathf.Sin(xsegment / segmentCount * 360f);
+	//			
+	//			for (int ysegment = 0; ysegment < segmentCount; ysegment++) {
+	//
+	//			}
+	//		}
+	//	}
 
 	public static Vector2 MouseDeltaNormalized()
 	{
@@ -311,6 +282,8 @@ public static class Common
 	public static Vector2 MouseDeltaInPixels()
 	{
 		var result = new Vector2(Input.GetAxis("Mouse X"), Input.GetAxis("Mouse Y"));
+		//		var mainCamera = Camera.main;
+		//		result.Scale(new Vector2(mainCamera.pixelWidth, mainCamera.pixelHeight));
 		return result;
 	}
 
@@ -362,11 +335,14 @@ public static class Common
 
 	public static Type[] GetExtendedTypes(Type fromType)
 	{
-		var types = Assembly.GetExecutingAssembly().GetTypes();
+		var assemblies = AppDomain.CurrentDomain.GetAssemblies();
 		List<Type> result = new List<Type>();
-		foreach (var type in types) {
-			if (fromType.IsAssignableFrom(type) && !type.IsAbstract) {
-				result.Add(type);
+		foreach (var assembly in assemblies) {
+			var types = assembly.GetTypes();
+			foreach (var type in types) {
+				if (fromType.IsAssignableFrom(type) && !type.IsAbstract) {
+					result.Add(type);
+				}
 			}
 		}
 		return result.ToArray();
@@ -374,13 +350,18 @@ public static class Common
 
 	public static object CreateInstance(Type type)
 	{
-		if (type == typeof(string))
+		if (type == typeof(string)) {
 			return "";
+		}
 
 		var constructor = type.GetConstructor(Type.EmptyTypes);
 		return constructor != null ? constructor.Invoke(new object[] { }) : FormatterServices.GetUninitializedObject(type);
 	}
-	public static Array CreateInstanceArray(Type type, int length)
+	public static T CreateInstance<T>()
+	{
+		return (T)CreateInstance(typeof(T));
+	}
+	public static Array CreateArray(Type type, int length)
 	{
 		var result = Array.CreateInstance(type, length);
 		for (int index = 0; index < length; index++) {
@@ -388,27 +369,122 @@ public static class Common
 		}
 		return result;
 	}
+	public static Array CreateArray(Type type, int length, Func<int, object> init)
+	{
+		var result = Array.CreateInstance(type, length);
+		for (int index = 0; index < length; index++) {
+			result.SetValue(init(index), index);
+		}
+		return result;
+	}
+	public static T[] CreateArray<T>(int length)
+	{
+		return (T[])CreateArray(typeof(T), length);
+	}
+	public static T[] CreateArray<T>(int length, Func<int, T> init)
+	{
+		var result = (T[])Array.CreateInstance(typeof(T), length);
+		for (int index = 0; index < length; index++) {
+			result.SetValue(init(index), index);
+		}
+		return result;
+	}
+
+	public static void Log(string message, params object[] objects)
+	{
+		UnityEngine.Debug.Log(String.Format(message, objects));
+	}
+	public static void LogWarning(string message, params object[] objects)
+	{
+		UnityEngine.Debug.LogWarning(String.Format(message, objects));
+	}
+	public static void LogError(string message, params object[] objects)
+	{
+		UnityEngine.Debug.LogError(String.Format(message, objects));
+	}
+
+	public static void DebugObject(object obj)
+	{
+		Debugger.Log(PrintObject(obj, 0, true));
+	}
+
+	public static string PrintObject(object obj, bool printTypes = true)
+	{
+		return PrintObject(obj, 0, printTypes);
+	}
+	private static string PrintObject(object obj, int depth, bool printTypes)
+	{
+		if (obj == null) {
+			return "'NULL'";
+		} else {
+			var objType = obj.GetType();
+			var bindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+
+			if (objType.GetMethod("ToString", bindingFlags, null, Type.EmptyTypes, new ParameterModifier[0]) != null) {
+				return obj.ToString();
+			} else {
+				var result = "";
+				var tabs = "".PadRight(depth, '\t');
+
+				if (obj is IEnumerable) {
+					result += "[\n";
+					var enumer = obj as IEnumerable;
+					int ielement = 0;
+					foreach (var element in enumer) {
+						result += tabs + '\t' + (printTypes ? (element.GetType().Name + " ") : "") + PrintObject(element, depth + 1, printTypes) + "\n";
+						ielement++;
+					}
+
+					result += tabs + "]";
+				} else {
+					var fields = objType.GetFields(BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
+					result += "{\n";
+
+					foreach (var field in fields) {
+						result += tabs + '\t' + (printTypes ? (field.FieldType.Name + " ") : "") + field.Name + ": " + PrintObject(field.GetValue(obj), depth + 1, printTypes) + "\n";
+					}
+
+					result += tabs + "}";
+				}
+
+				return result;
+			}
+		}
+	}
 
 	public static GameObject CreateGameObject(string name, Transform parent)
 	{
+		return CreateGameObject(name, parent, Vector3.zero, Quaternion.identity, Vector3.one);
+	}
+	public static GameObject CreateGameObject(string name, Transform parent, Vector3 alocalPosition)
+	{
+		return CreateGameObject(name, parent, alocalPosition, Quaternion.identity, Vector3.one);
+	}
+	public static GameObject CreateGameObject(string name, Transform parent, Vector3 alocalPosition, Quaternion alocalRotation)
+	{
+		return CreateGameObject(name, parent, alocalPosition, alocalRotation, Vector3.one);
+	}
+	public static GameObject CreateGameObject(string name, Transform parent, Vector3 alocalPosition, Quaternion alocalRotation, Vector3 alocalScale)
+	{
 		var result = new GameObject(name);
 		result.transform.parent = parent;
-		result.transform.localPosition = Vector3.zero;
-		result.transform.localRotation = Quaternion.identity;
+		result.transform.localPosition = alocalPosition;
+		result.transform.localRotation = alocalRotation;
+		result.transform.localScale = alocalScale;
 		return result;
 	}
 
 	public static GameObject Instantiate(GameObject go, Transform parent = null)
 	{
-		return Instantiate(go, parent, Vector3.zero, Quaternion.identity, go.transform.localScale);
+		return Common.Instantiate(go, parent, Vector3.zero, Quaternion.identity, go.transform.localScale);
 	}
 	public static GameObject Instantiate(GameObject go, Transform parent, Vector3 localPosition)
 	{
-		return Instantiate(go, parent, localPosition, Quaternion.identity, go.transform.localScale);
+		return Common.Instantiate(go, parent, localPosition, Quaternion.identity, go.transform.localScale);
 	}
 	public static GameObject Instantiate(GameObject go, Transform parent, Vector3 localPosition, Quaternion localRotation)
 	{
-		return Instantiate(go, parent, localPosition, localRotation, go.transform.localScale);
+		return Common.Instantiate(go, parent, localPosition, localRotation, go.transform.localScale);
 	}
 	public static GameObject Instantiate(GameObject go, Transform parent, Vector3 localPosition, Quaternion localRotation, Vector3 localScale)
 	{
@@ -443,76 +519,6 @@ public static class Common
 		return result;
 	}
 
-	public static bool Serialize(object obj, Stream stream, bool silent = false)
-	{
-		try {
-			MemoryStream memStream = new MemoryStream();
-			BinaryFormatter formatter = new BinaryFormatter();
-			formatter.Serialize(memStream, obj);
-			BinaryWriter writer = new BinaryWriter(stream);
-			var length = (int)memStream.Length;
-			writer.Write(length);
-			writer.Write(memStream.GetBuffer(), 0, length);
-			return true;
-		} catch (Exception e) {
-			if (!silent) {
-				Log("Serialization error: " + e.ToString() + "\nType: " + obj.GetType().ToString());
-			}
-			return false;
-		}
-	}
-	public static byte[] Serialize(object obj, bool silent = false)
-	{
-		try {
-			MemoryStream memStream = new MemoryStream();
-			BinaryFormatter formatter = new BinaryFormatter();
-			formatter.Serialize(memStream, obj);
-			return memStream.ToArray();
-		} catch (Exception e) {
-			if (!silent) {
-				Log("Serialization error: " + e.ToString() + "\nType: " + obj.GetType().ToString());
-			}
-			return null;
-		}
-
-	}
-
-	public static object Deserialize(Stream stream, bool silent = false)
-	{
-		try {
-			BinaryReader reader = new BinaryReader(stream);
-			int size = reader.ReadInt32();
-			var bytes = reader.ReadBytes(size);
-			return Deserialize(bytes, silent);
-		} catch (Exception e) {
-			if (!silent) {
-				Log("Deserialization error: " + e.ToString());
-			}
-			return null;
-		}
-	}
-	public static object Deserialize(byte[] bytes, bool silent = false)
-	{
-		try {
-			MemoryStream memStream = new MemoryStream(bytes);
-			var formatter = new BinaryFormatter();
-			return formatter.Deserialize(memStream);
-		} catch (Exception e) {
-			if (!silent) {
-				Log("Deserialization error: " + e.ToString());
-			}
-			return null;
-		}
-	}
-	public static T Deserialize<T>(Stream stream, bool silent = false)
-	{
-		return (T)Deserialize(stream, silent);
-	}
-	public static T Deserialize<T>(byte[] bytes, bool silent = false)
-	{
-		return (T)Deserialize(bytes, silent);
-	}
-
 	public static float RangeSearch<T, K>(T subject, IList<K> list, IComparer<T, K> comparer = null)
 	{
 		if (comparer == null) {
@@ -541,47 +547,33 @@ public static class Common
 		}
 	}
 
-	public static void CloneFilesAndDirectories(string[] sources, string destination, bool merge = false)
+	public static void CloneDirectory(string sourceDirName, string destDirName)
 	{
-		if (merge == false && Directory.Exists(destination)) {
-			Directory.Delete(destination, true);
+		// Get the subdirectories for the specified directory.
+		DirectoryInfo dir = new DirectoryInfo(sourceDirName);
+		DirectoryInfo[] dirs = dir.GetDirectories();
+
+		if (!dir.Exists) {
+			throw new DirectoryNotFoundException("Source directory does not exist or could not be found: " + sourceDirName);
 		}
 
-		foreach (var source in sources) {
-			if (Directory.Exists(source)) {
-				CloneDirectory(source, Path.Combine(destination, Path.GetDirectoryName(source)), false);
-			} else if (File.Exists(source)) {
-				File.Copy(source, Path.Combine(destination, Path.GetFileName(source)));
-			}
-		}
-	}
-	public static void CloneDirectory(string sourceDirName, string destDirName, bool merge = false)
-	{
-		var sourceDir = new DirectoryInfo(sourceDirName);
-		var destDir = new DirectoryInfo(destDirName);
-		if (merge == false && destDir.Exists) {
-			destDir.Delete(true);
-		}
-		CloneDirectory(sourceDir, destDir);
-	}
-	private static void CloneDirectory(DirectoryInfo sourceDir, DirectoryInfo destDir)
-	{
-		if (!sourceDir.Exists) {
-			throw new DirectoryNotFoundException("Source directory does not exist or could not be found: " + sourceDir.FullName);
-		}
-		
-		if (!destDir.Exists) {
-			destDir.Create();
+		// If the destination directory already exists, delete it. 
+		if (Directory.Exists(destDirName)) {
+			Directory.Delete(destDirName, true);
 		}
 
-		foreach (FileInfo file in sourceDir.GetFiles()) {
-			string temppath = Path.Combine(destDir.FullName, file.Name);
-			file.CopyTo(temppath, true);
+		Directory.CreateDirectory(destDirName);
+
+		// Get the files in the directory and copy them to the new location.
+		FileInfo[] files = dir.GetFiles();
+		foreach (FileInfo file in files) {
+			string temppath = Path.Combine(destDirName, file.Name);
+			file.CopyTo(temppath, false);
 		}
 
-		foreach (DirectoryInfo subdir in sourceDir.GetDirectories()) {
-			string temppath = Path.Combine(destDir.FullName, subdir.Name);
-			CloneDirectory(subdir, new DirectoryInfo(temppath));
+		foreach (DirectoryInfo subdir in dirs) {
+			string temppath = Path.Combine(destDirName, subdir.Name);
+			CloneDirectory(subdir.FullName, temppath);
 		}
 	}
 
@@ -599,25 +591,25 @@ public static class Common
 	{
 		System.Diagnostics.ProcessStartInfo processInfo;
 		System.Diagnostics.Process process;
+		var unicodeEncoding = System.Text.Encoding.GetEncoding(1200);
 
 		processInfo = new System.Diagnostics.ProcessStartInfo("cmd.exe", "/c " + command);
 		processInfo.CreateNoWindow = true;
 		processInfo.UseShellExecute = false;
 		processInfo.RedirectStandardError = true;
 		processInfo.RedirectStandardOutput = true;
-		var encoding = new System.Text.UnicodeEncoding();
-		processInfo.StandardOutputEncoding = encoding;
-		processInfo.StandardErrorEncoding = encoding;
+		processInfo.StandardOutputEncoding = unicodeEncoding;
+		processInfo.StandardErrorEncoding = unicodeEncoding;
+
+		process = System.Diagnostics.Process.Start(processInfo);
 
 		outputStream = null;
 		errorStream = null;
-		exitCode = -1;
-		process = System.Diagnostics.Process.Start(processInfo);
+		exitCode = 0;
 		process.WaitForExit();
 
 		outputStream = process.StandardOutput.ReadToEnd();
 		errorStream = process.StandardError.ReadToEnd();
-		exitCode = process.ExitCode;
 
 		process.Close();
 	}
@@ -629,77 +621,45 @@ public static class Common
 		}
 	}
 
-	public static Color HSVToColor(float h, float s, float v)
+	public static string BrowseAllFiles()
 	{
-		var result = Color.white;
-		if (s == 0f) {
-			result.r = v;
-			result.g = v;
-			result.b = v;
-
-		} else if (v == 0f) {
-			result.r = 0f;
-			result.g = 0f;
-			result.b = 0f;
-
-		} else {
-			result.r = 0f;
-			result.g = 0f;
-			result.b = 0f;
-			float num = h * 6f;
-			int num2 = (int)Mathf.Floor(num);
-			float num3 = num - (float)num2;
-			float num4 = v * (1f - s);
-			float num5 = v * (1f - s * num3);
-			float num6 = v * (1f - s * (1f - num3));
-			int num7 = num2;
-			switch (num7 + 1) {
-				case 0:
-					result.r = v;
-					result.g = num4;
-					result.b = num5;
-					break;
-				case 1:
-					result.r = v;
-					result.g = num6;
-					result.b = num4;
-					break;
-				case 2:
-					result.r = num5;
-					result.g = v;
-					result.b = num4;
-					break;
-				case 3:
-					result.r = num4;
-					result.g = v;
-					result.b = num6;
-					break;
-				case 4:
-					result.r = num4;
-					result.g = num5;
-					result.b = v;
-					break;
-				case 5:
-					result.r = num6;
-					result.g = num4;
-					result.b = v;
-					break;
-				case 6:
-					result.r = v;
-					result.g = num4;
-					result.b = num5;
-					break;
-				case 7:
-					result.r = v;
-					result.g = num6;
-					result.b = num4;
-					break;
-			}
-			result.r = Mathf.Clamp(result.r, 0f, 1f);
-			result.g = Mathf.Clamp(result.g, 0f, 1f);
-			result.b = Mathf.Clamp(result.b, 0f, 1f);
+		return BrowseFileOrFolder("All Files|*.*");
+	}
+	public static string BrowseFile(string description, params string[] extensions)
+	{
+		var filter = description + "|";
+		foreach (var ext in extensions) {
+			filter += "*." + ext + ";";
 		}
-		return result;
+		filter.TrimEnd(';');
+		return BrowseFileOrFolder(filter);
+	}
+	public static string BrowseFolder()
+	{
+		return BrowseFileOrFolder("");
+	}
+	static string BrowseFileOrFolder(string filter)
+	{
+		var streamingAssetsPath = Application.streamingAssetsPath.Replace('/', '\\');
+		var command = "\"\"" + streamingAssetsPath + "\\bin\\FileDialog.exe\"";
+		command += " -path " + PlayerPrefs.GetString("openFileDialogPath", "%USERPROFILE%Desktop");
+		if (!filter.IsNullOrEmpty()) {
+			command += " -filter \"" + filter + "\"";
+		}
+		command += "\"";
+		string error, output;
+		int exitCode;
+		Common.ExecuteCommandAndWait(command, out output, out error, out exitCode);
+		if (output.IsNullOrEmpty()) {
+			return null;
+		} else if (!error.IsNullOrEmpty() || !File.Exists(output) && !Directory.Exists(output)) {
+			UnityEngine.Debug.LogError(output);
+			UnityEngine.Debug.LogError(error);
+			return null;
+		} else {
+			PlayerPrefs.SetString("openFileDialogPath", '"' + output + '"');
+			return output.Trim();
+		}
 	}
 
 	#region

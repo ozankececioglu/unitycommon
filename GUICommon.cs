@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Linq;
 using Extensions;
 
 public abstract class GUICommon : MonoBehaviour
@@ -15,8 +16,24 @@ public abstract class GUICommon : MonoBehaviour
 	static GUIContent textImageContent = new GUIContent();
 	static GUIContent imageContent = new GUIContent();
 	static GUIContent textContent = new GUIContent();
-
 	static Stack<ActionContainer> postGuiActions = new Stack<ActionContainer>();
+	
+	public static float fieldNameWidth = 150f;
+	public static float fieldDepthWidth = 20f;
+	private static GUIStyle mfieldNameStyle = null;
+	public static GUIStyle fieldNameStyle 
+	{
+		get
+		{
+			if (mfieldNameStyle == null) {
+				mfieldNameStyle = new GUIStyle(GUI.skin.label);
+				mfieldNameStyle.clipping = TextClipping.Clip;
+				mfieldNameStyle.wordWrap = false;
+			}
+			return mfieldNameStyle;
+		}
+	}
+
 	public static void PushPostGui()
 	{
 		postGuiActions.Push(new ActionContainer());
@@ -32,46 +49,6 @@ public abstract class GUICommon : MonoBehaviour
 	{
 		var actionContainer = postGuiActions.Peek();
 		actionContainer.action += action;
-	}
-
-	public enum PopUpState
-	{
-		Hidden,
-		Shown,
-		OK
-	}
-
-	static int popUpControl = -1;
-	static PopUpState popUpState = PopUpState.Hidden;
-	static Func<PopUpState> popUpView;
-	public static void ShowPopUp(int id, Func<PopUpState> view)
-	{
-		popUpState = PopUpState.Shown;
-		popUpControl = id;
-		popUpView = view;
-	}
-	public static PopUpState CheckPopUp(int id)
-	{
-		if (popUpControl != -1 && popUpState == PopUpState.OK) {
-			popUpState = PopUpState.Hidden;
-			popUpControl = -1;
-			popUpView = null;
-		}
-		return popUpState;
-	}
-	public static void DrawPopUp()
-	{
-		if (popUpControl != -1) {
-			if (popUpState == PopUpState.Shown) {
-				popUpState = popUpView();
-
-			} else if (popUpState == PopUpState.OK && Event.current.type == EventType.Layout) {
-				popUpState = PopUpState.Hidden;
-				popUpControl = -1;
-				popUpView = null;
-				Debug.Log("Canceled");
-			}
-		}
 	}
 
 	public static GUIContent TempContent(string text)
@@ -101,41 +78,127 @@ public abstract class GUICommon : MonoBehaviour
 
 	public static void ClearCache()
 	{
-		popUpControl = 0;
+		comboControl = 0;
 		textCacheControl = 0;
-//		comboControl = 0;
 	}
 
-	public static float fieldNameWidth = 150f;
-	public static float fieldDepthWidth = 20f;
-	private static GUIStyle _fieldNameStyle = null;
-	public static GUIStyle fieldNameStyle
+	static int popupListHash = "Combo".GetHashCode();
+	static int comboControl = 0;
+	static int comboResult = -1;
+	static int comboColumns = 0;
+	static Rect comboRect;
+	public static bool ComboField(ref int selection, string[] fields, params GUILayoutOption[] options)
 	{
-		get
-		{
-			if (_fieldNameStyle == null) {
-				_fieldNameStyle = new GUIStyle(GUI.skin.label);
-				_fieldNameStyle.clipping = TextClipping.Clip;
-				_fieldNameStyle.wordWrap = false;
-			}
-			return _fieldNameStyle;
+		return ComboField(ref selection, fields, GUI.skin.box, options);
+	}
+	public static bool ComboField(ref int selection, string[] fields, GUIStyle style, params GUILayoutOption[] options)
+	{
+		int id = GUIUtility.GetControlID(popupListHash, FocusType.Passive);
+		if (style == null) {
+			style = GUI.skin.button;
 		}
+
+		GUILayout.Box(fields[selection], options);
+		Rect boxRect = GUILayoutUtility.GetLastRect();
+
+		Event e = Event.current;
+		if (e.type == EventType.MouseDown && boxRect.Contains(e.mousePosition)) {
+			comboControl = id;
+			var minSize = new Vector2();
+			foreach (var field in fields) {
+				var size = style.CalcSize(TempContent(field));
+				if (size.x > minSize.x)
+					minSize.x = size.x;
+				minSize.y += size.y;
+			}
+
+			minSize.y += Mathf.Max(style.margin.top, style.margin.bottom) * (fields.Length + 1);
+			comboColumns = Mathf.CeilToInt(minSize.y / Screen.height);
+			minSize.y /= comboColumns;
+			minSize.x = minSize.x * comboColumns + style.margin.left + style.margin.right;
+			comboRect.Set(Input.mousePosition.x - 1, Screen.height - Input.mousePosition.y - 1, minSize.x, minSize.y);
+
+			if (comboRect.xMax > Screen.width)
+				comboRect.x = Screen.width - comboRect.width;
+			if (comboRect.yMax > Screen.height)
+				comboRect.y = Screen.height - comboRect.height;
+		}
+
+		if (comboResult != -1 && comboControl == id) {
+			bool result = comboResult < fields.Length;
+			if (result) {
+				selection = comboResult;
+			}
+			comboResult = -1;
+			comboControl = 0;
+			return result;
+		}
+
+		int oldSelection = selection;
+		if (comboControl == id) {
+			AddPostGui(() => {
+				var mouseUp = Event.current.type == EventType.MouseUp;
+				GUI.Box(comboRect, "");
+				var newSelection = GUI.SelectionGrid(comboRect, oldSelection, fields, comboColumns);
+				if (mouseUp) {
+					comboResult = comboRect.Contains(Event.current.mousePosition) && newSelection != oldSelection ? newSelection : fields.Length;
+				}
+			});
+		}
+
+		return false;
+	}
+	public static bool EnumField<T>(ref T selection, params GUILayoutOption[] options)
+	{
+		return EnumField<T>(ref selection, GUI.skin.box, options);
+	}
+	public static bool EnumField<T>(ref T selection, GUIStyle style, params GUILayoutOption[] options)
+	{
+		var values = EnumDrawer.GetValues(typeof(T));
+		int index = Array.IndexOf(values, selection);
+		if (GUICommon.ComboField(ref index, EnumDrawer.GetNames(typeof(T)), style, options)) {
+			selection = (T)values.GetValue(index);
+			return true;
+		}
+		return false;
+	}
+
+	public static bool ColorField(ref Color color)
+	{
+		return false;
+	}
+
+	public static bool Button(string label, out bool isHover, params GUILayoutOption[] options)
+	{
+		return Button(label, out isHover, GUI.skin.button, options);
+	}
+	public static bool Button(string label, out bool isHover, GUIStyle style, params GUILayoutOption[] options)
+	{
+		var result = GUILayout.Button(label, style, options);
+		isHover = GUILayoutUtility.GetLastRect().Contains(Event.current.mousePosition);
+		return result;
 	}
 
 	static int textCacheControl = 0;
 	static string textCache = null;
 	delegate string StringerDel(object obj);
 	delegate bool ParserDel(string text, out object value);
-	static bool FormattedField(StringerDel stringer, ParserDel parser, ref object value, GUIStyle style,
-		params GUILayoutOption[] options)
+	static bool FormattedField(StringerDel stringer, ParserDel parser, ref object value, GUIStyle style, params GUILayoutOption[] options)
+	{
+		bool isEditing;
+		return FormattedField(stringer, parser, ref value, out isEditing, style, options);
+	}
+	static bool FormattedField(StringerDel stringer, ParserDel parser, ref object value, out bool isEditing, GUIStyle style, params GUILayoutOption[] options)
 	{
 		int controlId = GUIUtility.GetControlID(FocusType.Keyboard);
+		isEditing = controlId == GUIUtility.keyboardControl;
+
 		if (controlId == textCacheControl && controlId != GUIUtility.keyboardControl) {
 			textCacheControl = 0;
 		}
 		var inputStr = (controlId == textCacheControl && controlId == GUIUtility.keyboardControl) ? textCache : stringer(value);
 		var rect = GUILayoutUtility.GetRect(TempContent(controlId == GUIUtility.keyboardControl ?
-			inputStr + Input.compositionString : inputStr), style);
+			inputStr + Input.compositionString : inputStr), style, options);
 		var content = TempContent(inputStr);
 
 		bool guiChanged = GUI.changed;
@@ -219,6 +282,11 @@ public abstract class GUICommon : MonoBehaviour
 	}
 	public static bool IntField(ref int value, params GUILayoutOption[] options)
 	{
+		bool isEditing;
+		return IntField(ref value, out isEditing, options);
+	}
+	public static bool IntField(ref int value, out bool isEditing, params GUILayoutOption[] options)
+	{
 		var style = GUI.skin.textField;
 		object oval = value;
 		bool tresult = FormattedField(x => x.ToString(), delegate(string str, out object tvalue) {
@@ -226,11 +294,17 @@ public abstract class GUICommon : MonoBehaviour
 			bool result = Int32.TryParse(str, out val);
 			tvalue = val;
 			return result;
-		}, ref oval, style, options);
+		}, ref oval, out isEditing, style, options);
 		value = (int)oval;
+
 		return tresult;
 	}
 	public static bool FloatField(ref float value, params GUILayoutOption[] options)
+	{
+		bool isEditing;
+		return FloatField(ref value, out isEditing, options);
+	}
+	public static bool FloatField(ref float value, out bool isEditing, params GUILayoutOption[] options)
 	{
 		var style = GUI.skin.textField;
 		object oval = value;
@@ -239,11 +313,16 @@ public abstract class GUICommon : MonoBehaviour
 			bool result = Single.TryParse(str, out val);
 			tvalue = val;
 			return result;
-		}, ref oval, style, options);
+		}, ref oval, out isEditing, style, options);
 		value = (float)oval;
 		return tresult;
 	}
 	public static bool DoubleField(ref double value, params GUILayoutOption[] options)
+	{
+		bool isEditing;
+		return DoubleField(ref value, out isEditing, options);
+	}
+	public static bool DoubleField(ref double value, out bool isEditing, params GUILayoutOption[] options)
 	{
 		var style = GUI.skin.textField;
 		object oval = value;
@@ -252,7 +331,7 @@ public abstract class GUICommon : MonoBehaviour
 			bool result = Double.TryParse(str, out val);
 			tvalue = val;
 			return result;
-		}, ref oval, style, options);
+		}, ref oval, out isEditing, style, options);
 		value = (double)oval;
 		return tresult;
 	}
@@ -331,207 +410,23 @@ public abstract class GUICommon : MonoBehaviour
 
 		return changed;
 	}
-
-	static int colorFieldHash = "Color".GetHashCode();
-	static int colorFieldControl = 0;
-	static Color colorFieldResult;
-	static bool hasColorFieldResult;
-	static Rect colorFieldRect;
-	static void PaintColorPickerTexture(float hue)
-	{
-		var width = colorPickerTexture.width;
-		var height = colorPickerTexture.height;
-		for (int x = 0; x < width; x++) {
-			for (int y = 0; y < height; y++) {
-				colorPickerTexture.SetPixel(x, y, Common.HSVToColor(hue, (float)x / width, (float)y / height));
-			}
-		}
-	}
-	public static bool ColorField(ref Color color)
-	{
-		int id = GUIUtility.GetControlID(colorFieldHash, FocusType.Passive);
-
-		if (GUICommon.ColorButton(color, GUILayout.Width(45f), GUILayout.Height(12f))) {
-			colorFieldControl = id;
-		}
-
-		if (hasColorFieldResult && colorFieldControl == id) {
-
-		}
-
-		return false;
-	}
-
-//	static int comboHash = "Combo".GetHashCode();
-//	static int comboResult = -1;
-//	public static bool ComboField(ref int selection, string[] fields, params GUILayoutOption[] options)
-//	{
-//		return ComboField(ref selection, fields, GUI.skin.box, options);
-//	}
-//	public static bool ComboField(ref int selection, string[] fields, GUIStyle style, params GUILayoutOption[] options)
-//	{
-//		int id = GUIUtility.GetControlID(comboHash, FocusType.Passive);
-//
-//		if (style == null) {
-//			style = GUI.skin.button;
-//		}
-//		GUILayout.Box(fields[selection], options);
-//		Rect boxRect = GUILayoutUtility.GetLastRect();
-//
-//		if (CheckPopUp(id) == PopUpState.OK) {
-//			var result = selection != comboResult;
-//			selection = comboResult;
-//			return result;
-//		}
-//
-//		Event e = Event.current;
-//		if (e.type == EventType.MouseDown && boxRect.Contains(e.mousePosition)) {
-//			var minSize = new Vector2();
-//			foreach (var field in fields) {
-//				var size = style.CalcSize(TempContent(field));
-//				if (size.x > minSize.x)
-//					minSize.x = size.x;
-//				minSize.y += size.y;
-//			}
-//			
-//			minSize.x += style.margin.left + style.margin.right;
-//			minSize.y += Mathf.Max(style.margin.top, style.margin.bottom) * (fields.Length + 1);
-//			var comboRect = new Rect(Input.mousePosition.x - 1, Screen.height - Input.mousePosition.y - 1, minSize.x, minSize.y);
-//			comboRect = comboRect.FitToScreen();
-//
-//			int oldSelection = selection;
-//			ShowPopUp(id, () => {
-//				Debug.Log("showPopUp");
-//				GUI.Box(comboRect, "");
-//				var newSelection = GUI.SelectionGrid(comboRect, oldSelection, fields, 1);
-//				if (Event.current.type == EventType.MouseUp) {
-//					if (comboRect.Contains(Event.current.mousePosition) && newSelection != oldSelection) {
-//						comboResult = newSelection;
-//						return PopUpState.OK;
-//					} else {
-//						return PopUpState.Hidden;
-//					}
-//				} else {
-//					return PopUpState.Shown;
-//				}
-//			});
-//		}
-//
-//		return false;
-//	}
-
-	static int comboHash = "Combo".GetHashCode();
-	static int comboControl = 0;
-	static int comboResult = -1;
-	static Rect comboRect;
-	public static bool ComboField(ref int selection, string[] fields, params GUILayoutOption[] options)
-	{
-		return ComboField(ref selection, fields, GUI.skin.box, options);
-	}
-	public static bool ComboField(ref int selection, string[] fields, GUIStyle style, params GUILayoutOption[] options)
-	{
-		int id = GUIUtility.GetControlID(comboHash, FocusType.Passive);
-		if (style == null)
-			style = GUI.skin.button;
-
-		GUILayout.Box(fields[selection], options);
-		Rect boxRect = GUILayoutUtility.GetLastRect();
-
-		Event e = Event.current;
-		if (e.type == EventType.MouseDown && boxRect.Contains(e.mousePosition)) {
-			comboControl = id;
-			var minSize = new Vector2();
-			foreach (var field in fields) {
-				var size = style.CalcSize(TempContent(field));
-				if (size.x > minSize.x)
-					minSize.x = size.x;
-				minSize.y += size.y;
-			}
-
-			minSize.x += style.margin.left + style.margin.right;
-			minSize.y += Mathf.Max(style.margin.top, style.margin.bottom) * (fields.Length + 1);
-			comboRect.Set(Input.mousePosition.x - 1, Screen.height - Input.mousePosition.y - 1, minSize.x, minSize.y);
-
-			if (comboRect.xMax > Screen.width)
-				comboRect.x = Screen.width - comboRect.width;
-			if (comboRect.yMax > Screen.height)
-				comboRect.y = Screen.height - comboRect.height;
-		}
-
-		if (comboResult != -1 && comboControl == id) {
-			bool result = selection != comboResult;
-			selection = comboResult;
-			comboResult = -1;
-			comboControl = 0;
-			return result;
-		}
-
-		int oldSelection = selection;
-		if (comboControl == id) {
-			AddPostGui(() => {
-				var mouseUp = Event.current.type == EventType.MouseUp;
-				GUI.Box(comboRect, "");
-				var newSelection = GUI.SelectionGrid(comboRect, oldSelection, fields, 1);
-				if (mouseUp) {
-					comboResult = comboRect.Contains(Event.current.mousePosition) ? newSelection : oldSelection;
-				}
-			});
-		}
-
-		return false;
-	}
-
-	public static Texture2D colorBoxTexture = new Texture2D(1, 1);
-	public static Texture2D colorPickerTexture = new Texture2D(256, 256);
-	private static GUIStyle _colorBoxStyle;
-	public static GUIStyle colorBoxStyle
-	{
-		get
-		{
-			if (_colorBoxStyle == null) {
-				_colorBoxStyle = new GUIStyle(GUI.skin.box);
-				_colorBoxStyle.normal.background = colorBoxTexture;
-			}
-			return _colorBoxStyle;
-		}
-	}
-	private static GUIStyle _colorHueStyle;
-	public static GUIStyle colorHueStyle
-	{
-		get
-		{
-			if (_colorHueStyle == null) {
-				_colorHueStyle = new GUIStyle(GUI.skin.box);
-				_colorHueStyle.normal.background = Resources.Load("colorHueTexture") as Texture2D;
-			}
-			return _colorHueStyle;
-		}
-	}
-	public static void ColorBox(Color color, params GUILayoutOption[] options)
-	{
-		colorBoxTexture.SetPixel(0, 0, color);
-		colorBoxTexture.Apply();
-		GUILayout.Box(GUIContent.none, colorBoxStyle, options);
-	}
-	public static bool ColorButton(Color color, params GUILayoutOption[] options)
-	{
-		colorBoxTexture.SetPixel(0, 0, color);
-		colorBoxTexture.Apply();
-		return GUILayout.Button(GUIContent.none, colorBoxStyle, options);
-	}
-
 	public static bool StringFieldWithLabel(string label, ref string text)
 	{
 		GUILayout.BeginHorizontal();
 		GUILayout.Label(label, fieldNameStyle, GUILayout.Width(fieldNameWidth));
-		bool guiChanged = GUI.changed;
+		bool guiWasChanged = GUI.changed;
+		bool result = false;
 		GUI.changed = false;
+		if (text == null) {
+			text = "";
+			result = true;
+		}
 		text = GUILayout.TextField(text);
-		bool tguiChanged = GUI.changed;
-		GUI.changed = guiChanged || tguiChanged;
+		result |= GUI.changed;
+		GUI.changed = guiWasChanged || result;
 		GUILayout.EndHorizontal();
 
-		return tguiChanged;
+		return result;
 	}
 	public static bool BoolFieldWithLabel(string label, ref bool value)
 	{
@@ -546,100 +441,114 @@ public abstract class GUICommon : MonoBehaviour
 	}
 	public static bool IntFieldWithLabel(string label, ref int value)
 	{
+		bool isEditing;
+		return IntFieldWithLabel(label, ref value, out isEditing);
+	}
+	public static bool IntFieldWithLabel(string label, ref int value, out bool isEditing)
+	{
 		GUILayout.BeginHorizontal();
 		float delta = NumberLabel(label, GUILayout.Width(fieldNameWidth));
 		bool result = !delta.IsZero();
 		if (result) {
 			value += (int)delta;
 		}
-		result |= GUICommon.IntField(ref value);
+		result |= GUICommon.IntField(ref value, out isEditing);
 		GUILayout.EndHorizontal();
 
 		return result;
 	}
 	public static bool FloatFieldWithLabel(string label, ref float value)
 	{
+		bool isEditing;
+		return FloatFieldWithLabel(label, ref value, out isEditing);
+	}
+	public static bool FloatFieldWithLabel(string label, ref float value, out bool isEditing)
+	{
 		GUILayout.BeginHorizontal();
 		float delta = NumberLabel(label, GUILayout.Width(fieldNameWidth));
 		bool result = !delta.IsZero();
 		if (result) {
 			value += delta * 0.1f;
 		}
-		result |= GUICommon.FloatField(ref value);
+		result |= GUICommon.FloatField(ref value, out isEditing);
 		GUILayout.EndHorizontal();
 
 		return result;
-	}
-	public static bool FloatSliderWithLabel(string label, ref float value, float min, float max)
-	{
-		GUILayout.BeginHorizontal();
-		GUILayout.Label(label, GUILayout.Width(fieldNameWidth));
-		var nvalue = GUILayout.HorizontalSlider(value, min, max);
-		GUILayout.EndHorizontal();
-		if (!(nvalue - value).IsZero()) {
-			value = nvalue;
-			return true;
-		}
-		return false;
-	}
-	public static bool IntSliderWithLabel(string label, ref int value, int min, int max)
-	{
-		GUILayout.BeginHorizontal();
-		GUILayout.Label(label, GUILayout.Width(fieldNameWidth));
-		int nvalue = Mathf.RoundToInt(GUILayout.HorizontalSlider(value, min, max));
-		GUILayout.EndHorizontal();
-		if (nvalue != value) {
-			value = nvalue;
-			return true;
-		}
-		return false;
 	}
 	public static bool DoubleFieldWithLabel(string label, ref double value)
 	{
+		bool isEditing;
+		return DoubleFieldWithLabel(label, ref value, out isEditing);
+	}
+	public static bool DoubleFieldWithLabel(string label, ref double value, out bool isEditing)
+	{
 		GUILayout.BeginHorizontal();
 		float delta = NumberLabel(label, GUILayout.Width(fieldNameWidth));
 		bool result = !delta.IsZero();
 		if (result) {
 			value += delta * 0.1f;
 		}
-		result |= GUICommon.DoubleField(ref value);
+		result |= GUICommon.DoubleField(ref value, out isEditing);
 		GUILayout.EndHorizontal();
 
 		return result;
 	}
-	public static bool ImageFieldWithLabel(string label, Texture image)
-	{
-		GUILayout.BeginHorizontal();
-		GUILayout.Label(label, GUILayout.Width(fieldNameWidth));
-		var result = image != null ? GUILayout.Button(image, GUI.skin.label, GUILayout.Height(80f)) : GUILayout.Button("<>");
-		GUILayout.EndHorizontal();
-		return result;
-	}
-	public static bool ColorFieldWithLabel(string label, ref Color color)
-	{
-
-		return false;
-	}
-	public static bool ComboFieldWithLabel(string label, ref int selection, string[] fields)
+	public static bool Vector3FieldWithLabel(string label, ref Vector3 value)
 	{
 		GUILayout.BeginHorizontal();
 		GUILayout.Label(label, fieldNameStyle, GUILayout.Width(fieldNameWidth));
-		var result = GUICommon.ComboField(ref selection, fields);
+		var result = Vector3Field(ref value);
 		GUILayout.EndHorizontal();
+		return result;
+	}
+	public static bool BoundsFieldWithLabel(string label, ref Bounds value)
+	{
+		GUILayout.BeginHorizontal();
+		GUILayout.Label(label, fieldNameStyle, GUILayout.Width(fieldNameWidth));
+		var result = BoundsField(ref value);
+		GUILayout.EndHorizontal();
+		return result;
+	}
+	public static bool ComboFieldWithLabel(string label, ref int selection, string[] fields)
+	{
+		if (selection >= 0 && selection < fields.Length) {
+			GUILayout.BeginHorizontal();
+			GUILayout.Label(label, fieldNameStyle, GUILayout.Width(fieldNameWidth));
+			var result = GUICommon.ComboField(ref selection, fields);
+			GUILayout.EndHorizontal();
+			return result;
+		} else {
+			return false;
+		}
+	}
+	public static bool SliderWithLabel(string label, ref float value, float min, float max)
+	{
+		if (min > max) {
+			var tmin = min;
+			min = max;
+			max = tmin;
+		}
 
+		bool result = false;
+		GUILayout.BeginHorizontal();
+		GUILayout.Label(label, GUICommon.fieldNameStyle, GUILayout.Width(GUICommon.fieldNameWidth));
+		var tvalue = GUILayout.HorizontalSlider(value, min, max);
+		if (!(tvalue - value).IsZero()) {
+			value = tvalue;
+			result = true;
+		}
+		GUILayout.EndHorizontal();
 		return result;
 	}
 
-	public Rect guiArea = new Rect(0f, 0f, Screen.width, Screen.height);
-	void OnGUI()
+	public virtual Rect Area { get { return new Rect(); } }
+	protected void OnGUI()
 	{
+		GUILayout.BeginArea(Area, GUI.skin.box);
 		GUICommon.PushPostGui();
-		GUILayout.BeginArea(guiArea);
-		GUILayout.BeginVertical(GUI.skin.box);
 		OnGUICommon();
-		GUILayout.EndVertical();
-		GUILayout.EndArea();
 		GUICommon.PopPostGui();
+		GUILayout.EndArea();
 	}
 	protected abstract void OnGUICommon();
 }
