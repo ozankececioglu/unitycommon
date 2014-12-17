@@ -94,28 +94,28 @@ namespace Extensions
 
 	public static class Vector3Ext
 	{
-        public static readonly Vector3 max = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
-        public static readonly Vector3 min = new Vector3(float.MinValue, float.MinValue, float.MinValue);
-        public static readonly Vector3 nan = new Vector3(float.NaN, float.NaN, float.NaN);
+		public static readonly Vector3 max = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
+		public static readonly Vector3 min = new Vector3(float.MinValue, float.MinValue, float.MinValue);
+		public static readonly Vector3 nan = new Vector3(float.NaN, float.NaN, float.NaN);
 
 		public static bool IsZero(this Vector3 me) { return me.x.IsZero() && me.y.IsZero() && me.z.IsZero(); }
-        public static bool IsValid(this Vector3 me) { return !(float.IsInfinity(me.x) || float.IsInfinity(me.y) || float.IsInfinity(me.z) || float.IsNaN(me.x) || float.IsNaN(me.y) || float.IsNaN(me.z)); }
+		public static bool IsValid(this Vector3 me) { return !(float.IsInfinity(me.x) || float.IsInfinity(me.y) || float.IsInfinity(me.z) || float.IsNaN(me.x) || float.IsNaN(me.y) || float.IsNaN(me.z)); }
 		public static float Max(this Vector3 me) { return Mathf.Max(me.x, me.y, me.z); }
 		public static Vector3 Abs(this Vector3 me) { return new Vector3(Mathf.Abs(me.x), Mathf.Abs(me.y), Mathf.Abs(me.z)); }
 		public static Vector3 ClampAngle(this Vector3 me) { return new Vector3(Geometry.ClampAngle(me.x), Geometry.ClampAngle(me.y), Geometry.ClampAngle(me.z)); }
 		public static Vector3 InverseScaled(this Vector3 me) { return new Vector3(1f / me.x, 1f / me.y, 1f / me.z); }
-        public static Vector3 XY(this Vector3 me) { return new Vector3(me.x, me.y, 0f); }
-        public static Vector3 XZ(this Vector3 me) { return new Vector3(me.x, 0f, me.z); }
-        public static Vector3 YZ(this Vector3 me) { return new Vector3(0f, me.y, me.z); }
-        public static Vector3 X(this Vector3 me) { return new Vector3(me.x, 0f, 0f); }
-        public static Vector3 Y(this Vector3 me) { return new Vector3(0f, me.y, 0f); }
-        public static Vector3 Z(this Vector3 me) { return new Vector3(0f, 0f, me.z); }
-        public static Vector4 ToVector4(this Vector3 me) { return new Vector4(me.x, me.y, me.z, 1.0f); }
+		public static Vector3 XY(this Vector3 me) { return new Vector3(me.x, me.y, 0f); }
+		public static Vector3 XZ(this Vector3 me) { return new Vector3(me.x, 0f, me.z); }
+		public static Vector3 YZ(this Vector3 me) { return new Vector3(0f, me.y, me.z); }
+		public static Vector3 X(this Vector3 me) { return new Vector3(me.x, 0f, 0f); }
+		public static Vector3 Y(this Vector3 me) { return new Vector3(0f, me.y, 0f); }
+		public static Vector3 Z(this Vector3 me) { return new Vector3(0f, 0f, me.z); }
+		public static Vector4 ToVector4(this Vector3 me) { return new Vector4(me.x, me.y, me.z, 1.0f); }
 	}
 
 	public static class QuaternionExt
 	{
-		
+
 	}
 
 	public static class RectExt
@@ -128,10 +128,10 @@ namespace Extensions
 
 	public static class BoundsExt
 	{
-        public static readonly Bounds invalid = new Bounds(Vector3Ext.nan, Vector3Ext.nan);
-        public static readonly Bounds one = new Bounds(Vector3.zero, Vector3.one);
+		public static readonly Bounds invalid = new Bounds(Vector3Ext.nan, Vector3Ext.nan);
+		public static readonly Bounds one = new Bounds(Vector3.zero, Vector3.one);
 
-        public static bool IsValid(this Bounds me) { return me.center.IsValid() && me.extents.IsValid(); }
+		public static bool IsValid(this Bounds me) { return me.center.IsValid() && me.extents.IsValid(); }
 
 		public static IEnumerable<Vector3> Corners(this Bounds me)
 		{
@@ -144,15 +144,15 @@ namespace Extensions
 			yield return me.center + new Vector3(-me.extents.x, -me.extents.y, -me.extents.z);
 			yield return me.center + new Vector3(me.extents.x, me.extents.y, me.extents.z);
 		}
-        public static IEnumerable<Plane> Planes(this Bounds me)
-        {
-            yield return new Plane(Vector3.left, me.center + me.extents.X());
-            yield return new Plane(Vector3.right, me.center - me.extents.X());
-            yield return new Plane(Vector3.down, me.center + me.extents.Y());
-            yield return new Plane(Vector3.up, me.center - me.extents.Y());
-            yield return new Plane(Vector3.back, me.center + me.extents.Z());
-            yield return new Plane(Vector3.forward, me.center - me.extents.Z());
-        }
+		public static IEnumerable<Plane> Planes(this Bounds me)
+		{
+			yield return new Plane(Vector3.left, me.center + me.extents.X());
+			yield return new Plane(Vector3.right, me.center - me.extents.X());
+			yield return new Plane(Vector3.down, me.center + me.extents.Y());
+			yield return new Plane(Vector3.up, me.center - me.extents.Y());
+			yield return new Plane(Vector3.back, me.center + me.extents.Z());
+			yield return new Plane(Vector3.forward, me.center - me.extents.Z());
+		}
 		public static bool Contains(this Bounds me, Bounds other) { return me.Contains(other.max) && me.Contains(other.min); }
 		public static Vector3 Bottom(this Bounds me) { return me.center - new Vector3(0f, me.extents.y, 0f); }
 		public static Vector3 Top(this Bounds me) { return me.center + new Vector3(0f, me.extents.y, 0f); }
@@ -252,23 +252,23 @@ namespace Extensions
 			}
 		}
 
-        public static Bounds GetCombinedMeshBounds(this Transform me, Transform reference = null)
-        {
-            Matrix4x4 worldToLocal = reference == null ? Matrix4x4.identity : reference.worldToLocalMatrix;
-            var rbounds = me.GetComponentsInChildren<MeshFilter>()
-                .Select(filter => new RotatableBounds(filter.sharedMesh.bounds, filter.transform.localToWorldMatrix * worldToLocal));
-            var enumer = rbounds.GetEnumerator();
-            if (!enumer.MoveNext()) {
-                return new Bounds();
-            }
+		public static Bounds GetCombinedMeshBounds(this Transform me, Transform reference = null)
+		{
+			Matrix4x4 worldToLocal = reference == null ? Matrix4x4.identity : reference.worldToLocalMatrix;
+			var rbounds = me.GetComponentsInChildren<MeshFilter>()
+				.Select(filter => new RotatableBounds(filter.sharedMesh.bounds, filter.transform.localToWorldMatrix * worldToLocal));
+			var enumer = rbounds.GetEnumerator();
+			if (!enumer.MoveNext()) {
+				return new Bounds();
+			}
 
-            var result = enumer.Current.ToBounds();
-            while (enumer.MoveNext()) {
-                result.Encapsulate(enumer.Current.ToBounds());
-            }
-            
-            return result;
-        }
+			var result = enumer.Current.ToBounds();
+			while (enumer.MoveNext()) {
+				result.Encapsulate(enumer.Current.ToBounds());
+			}
+
+			return result;
+		}
 
 		public static void RemoveChildren(this Transform me, Predicate<Transform> predicate)
 		{
@@ -297,7 +297,7 @@ namespace Extensions
 		public static void RotateAroundLocal(this Transform me, Vector3 local, Vector3 localAxis, float angle)
 		{
 			local = me.TransformPoint(local);
-            localAxis = me.TransformDirection(localAxis);
+			localAxis = me.TransformDirection(localAxis);
 			me.RotateAround(local, localAxis, angle);
 		}
 		public static void Reset(this Transform me)
@@ -392,10 +392,10 @@ namespace Extensions
 
 			return result;
 		}
-        public static Bounds GetCombinedMeshBounds(this GameObject me, GameObject reference = null)
-        {
-            return me.transform.GetCombinedMeshBounds(reference == null ? null : reference.transform);
-        }
+		public static Bounds GetCombinedMeshBounds(this GameObject me, GameObject reference = null)
+		{
+			return me.transform.GetCombinedMeshBounds(reference == null ? null : reference.transform);
+		}
 	}
 
 	public static class CameraExt

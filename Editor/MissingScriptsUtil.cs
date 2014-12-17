@@ -30,8 +30,6 @@ public class MissingScriptsUtil : Editor
 			return;
 		}
 
-//		var log = "";
-
 		List<string> properties = new List<string>();
 		foreach (var target in targets) {
 			var seri = new SerializedObject(target);
@@ -76,7 +74,7 @@ public class MissingScriptsUtil : Editor
 		LoadNextPrefabWithMissingScript();
 	}
 
-	[MenuItem("SimBT/List All Scripts", priority = 498)]
+	[MenuItem("UnityCommon/List All Scripts", priority = 498)]
 	public static void ListAllScripts()
 	{
 		// Project loaded scripts
@@ -94,7 +92,7 @@ public class MissingScriptsUtil : Editor
 		Debug.Log(log);
 	}
 
-	[MenuItem("SimBT/Find Missing Scripts", priority = 499)]
+	[MenuItem("UnityCommon/Find Missing Scripts", priority = 499)]
 	public static void FindMissingScripts()
 	{
 		var missings = new List<GameObject>();
@@ -130,7 +128,7 @@ public class MissingScriptsUtil : Editor
 		File.WriteAllText("missing.txt", log);
 	}
 
-	[MenuItem("SimBT/Find And Fix Missing Scripts", priority = 500)]
+	[MenuItem("UnityCommon/Find And Fix Missing Scripts", priority = 500)]
 	public static void FixMissingScripts()
 	{
 		Resources.UnloadUnusedAssets();
@@ -151,7 +149,7 @@ public class MissingScriptsUtil : Editor
 				var fields = script.GetClass().GetFields(BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic)
 					.Where(p => p.IsPublic || (!p.IsPublic && p.IsDefined(typeof(SerializeField), false)))
 					.ToDictionary(p => p.Name);
-				infos.Add(new ScriptInfo { script = script, fields = fields});
+				infos.Add(new ScriptInfo { script = script, fields = fields });
 			}
 		}
 
@@ -164,12 +162,12 @@ public class MissingScriptsUtil : Editor
 
 		// Get loaded gameobjects
 		var missings = new List<GameObject>();
-//		var gos = Resources.FindObjectsOfTypeAll(typeof(GameObject)) as GameObject[];
-//		foreach (GameObject go in gos) {
-//			if (FindMissingScriptInGo(go)) {
-//				missings.Add(go);
-//			}
-//		}
+		//		var gos = Resources.FindObjectsOfTypeAll(typeof(GameObject)) as GameObject[];
+		//		foreach (GameObject go in gos) {
+		//			if (FindMissingScriptInGo(go)) {
+		//				missings.Add(go);
+		//			}
+		//		}
 
 		Debug.Log(String.Format("Missing scripts fix operation about to start with {0} gameobjects, {1} prefabs and {2} scripts", missings.Count, prefabPaths.Count, infos.Count));
 

@@ -17,11 +17,11 @@ public abstract class GUICommon : MonoBehaviour
 	static GUIContent imageContent = new GUIContent();
 	static GUIContent textContent = new GUIContent();
 	static Stack<ActionContainer> postGuiActions = new Stack<ActionContainer>();
-	
+
 	public static float fieldNameWidth = 150f;
 	public static float fieldDepthWidth = 20f;
 	private static GUIStyle mfieldNameStyle = null;
-	public static GUIStyle fieldNameStyle 
+	public static GUIStyle fieldNameStyle
 	{
 		get
 		{

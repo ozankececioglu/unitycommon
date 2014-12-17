@@ -113,34 +113,6 @@ public class SingletonUnity<T> : MonoBehaviour where T : MonoBehaviour
 
 public static class Common
 {
-#if UNITY_EDITOR
-	[MenuItem("SimBT/Apply All Prefabs", priority = 500)]
-	public static void ApplyChangesToPrefabs()
-	{
-		var gos = Selection.gameObjects;
-		foreach (var go in gos) {
-			Selection.activeGameObject = go;
-			EditorApplication.ExecuteMenuItem("GameObject/Apply Changes To Prefab");
-		}
-		Selection.objects = gos;
-	}
-	public static void ApplyChangeToPrefab(GameObject go)
-	{
-		var selection = Selection.objects;
-		Selection.activeObject = go;
-		EditorApplication.ExecuteMenuItem("GameObject/Apply Changes To Prefab");
-		Selection.objects = selection;
-	}
-	public static bool IsPrefab(UnityEngine.Object obj)
-	{
-		return PrefabUtility.GetPrefabParent(obj) == null && PrefabUtility.GetPrefabObject(obj) != null;
-	}
-	public static bool IsGameObject(UnityEngine.Object obj)
-	{
-		return obj is GameObject ? !IsPrefab(obj) : false;
-	}
-#endif
-
 	static Texture2D dummyTexture = null;
 	public static Texture2D DummyTexture()
 	{
@@ -272,22 +244,6 @@ public static class Common
 		UnityEngine.Debug.DrawLine(position + new Vector3(xmax, ymin, zmax), position + new Vector3(xmax, ymax, zmax), color);
 		UnityEngine.Debug.DrawLine(position + new Vector3(xmax, ymin, zmax), position + new Vector3(xmin, ymin, zmax), color);
 	}
-	//	private const int segmentCount = 8;
-	//	public static void DrawSphere(Vector3 center, float radius) 
-	//	{
-	//		DrawSphere(center, radius, Color.white);
-	//	}
-	//	public static void DrawSphere(Vector3 center, float radius, Color color)
-	//	{
-	//		Vector3 previous = center + Vector3.one * radius;
-	//		for (int xsegment = 0; xsegment < segmentCount; xsegment++) {
-	//			var sin = Mathf.Sin(xsegment / segmentCount * 360f);
-	//			
-	//			for (int ysegment = 0; ysegment < segmentCount; ysegment++) {
-	//
-	//			}
-	//		}
-	//	}
 
 	public static Vector2 MouseDeltaNormalized()
 	{
